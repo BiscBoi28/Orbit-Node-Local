@@ -1,0 +1,7 @@
+neo4j>=6.1.0           # Neo4j Python driver — 6.x is backward-compatible with Neo4j 5.x server
+python-dotenv>=1.0.0   # .env loading
+pytest>=7.4.0          # Test runner
+pytest-cov>=4.1.0      # Coverage
+pydantic>=2.0.0        # Payload validation / data contracts
+rich>=13.0.0           # Pretty console output for scripts
+click>=8.1.0           # CLI entry points for execution scripts

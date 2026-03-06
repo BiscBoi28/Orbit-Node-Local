@@ -1,0 +1,12 @@
+# Environment and credentials
+.env
+credentials.json
+token.json
+
+# Intermediate files
+.tmp/
+
+# Python
+__pycache__/
+*.pyc
+.venv/

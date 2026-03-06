@@ -1,0 +1,36 @@
+# docker-compose.yml
+version: "3.9"
+
+services:
+  neo4j:
+    image: neo4j:5.18-community          # Neo4j 5.x community — confirmed stable
+    container_name: orbit-neo4j
+    restart: unless-stopped
+    ports:
+      - "7474:7474"     # Browser / HTTP API
+      - "7687:7687"     # Bolt protocol (Python driver connects here)
+    environment:
+      NEO4J_AUTH: "neo4j/orbit_secure_pass"         # Change this — also update .env
+      NEO4J_PLUGINS: '["apoc"]'                      # Auto-installs APOC
+      NEO4J_dbms_security_procedures_unrestricted: "apoc.*"
+      NEO4J_dbms_security_procedures_allowlist: "apoc.*"
+      NEO4J_server_memory_heap_initial__size: "512m"
+      NEO4J_server_memory_heap_max__size: "1G"
+      NEO4J_server_memory_pagecache_size: "512m"
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/var/lib/neo4j/import
+      - neo4j_plugins:/plugins
+    healthcheck:
+      test: ["CMD", "wget", "-O", "-", "http://localhost:7474"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+volumes:
+  neo4j_data:
+  neo4j_logs:
+  neo4j_import:
+  neo4j_plugins:

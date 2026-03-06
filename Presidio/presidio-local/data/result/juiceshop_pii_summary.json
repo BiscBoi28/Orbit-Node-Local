@@ -1,0 +1,29 @@
+{
+  "scan_metadata": {
+    "input_file": "data/request/juiceshop_seed_export.jsonl",
+    "scan_date": "2026-03-06T22:21:05.250029",
+    "total_users_scanned": 39,
+    "total_pii_entities_detected": 62
+  },
+  "risk_distribution": {
+    "CRITICAL": 5,
+    "NONE": 25,
+    "MINIMAL": 4,
+    "MEDIUM": 3,
+    "LOW": 2
+  },
+  "entity_type_distribution": {
+    "CREDIT_CARD": 5,
+    "PHONE_NUMBER": 3,
+    "US_BANK_NUMBER": 12,
+    "PERSON": 32,
+    "LOCATION": 6,
+    "US_SSN": 2,
+    "EMAIL_ADDRESS": 2
+  },
+  "high_risk_summary": {
+    "critical_users": 5,
+    "high_risk_users": 0,
+    "total_high_risk": 5
+  }
+}

@@ -1,0 +1,198 @@
+{
+  "test_suite": "Presidio PII Detection Test Cases",
+  "version": "1.0",
+  "base_url": "http://localhost:5001",
+  "test_cases": [
+    {
+      "test_id": "UC-02-01",
+      "test_name": "Verify that presidio is running",
+      "description": "To verify that presidio is running",
+      "precondition": "Docker Desktop running, docker-compose.yml configured, Port 5001 exposed",
+      "test_steps": [
+        "Open terminal",
+        "Navigate to project root: cd ~/presidio-local",
+        "Run: docker ps",
+        "Verify container named presidio-analyzer is listed",
+        "Run: curl http://localhost:5001/health"
+      ],
+      "expected_result": "Container running in docker ps, curl returns: Presidio Analyzer service is up, HTTP status code 200",
+      "pass_criteria": [
+        "Container status is running",
+        "No fatal error when running docker ps",
+        "curl command returns success response"
+      ],
+      "test_type": "health_check",
+      "endpoint": "/health",
+      "method": "GET"
+    },
+    {
+      "test_id": "UC-02-02",
+      "test_name": "Detect an email address",
+      "description": "Detect an email address in text content",
+      "precondition": "Presidio container running, scan_request_chunks.jsonl exists in data/request",
+      "test_input": {
+        "chunk_id": "test_email_1",
+        "asset_id": "A1",
+        "content_text": "email: test.user@example.com"
+      },
+      "test_steps": [
+        "Open data/request/scan_request_chunks.jsonl",
+        "Add a test line: {\"chunk_id\":\"test_email_1\",\"asset_id\":\"A1\",\"content_text\":\"email: test.user@example.com\"}",
+        "Save file",
+        "Run: python3 scripts/analyze_chunks.py5",
+        "Open: data/result/scan_result_chunks.jsonl",
+        "Search for test_email_1"
+      ],
+      "expected_result": {
+        "entity_type": "EMAIL_ADDRESS",
+        "confidence_score": ">=0.8",
+        "chunk_id_matches": true,
+        "entity_exists": true,
+        "presidio_entities_not_empty": true
+      },
+      "pass_criteria": [
+        "Output contains entity_type: 'EMAIL_ADDRESS'",
+        "Confidence score >= 0.8",
+        "chunk_id matches input",
+        "Entity Exists",
+        "presidio_entities list is not empty"
+      ],
+      "test_type": "entity_detection",
+      "entity_type": "EMAIL_ADDRESS",
+      "expected_entities": [
+        {
+          "text": "test.user@example.com",
+          "type": "EMAIL_ADDRESS",
+          "min_confidence": 0.8
+        }
+      ]
+    },
+    {
+      "test_id": "UC-02-03",
+      "test_name": "Detect Credit card number",
+      "description": "Detect credit card number in text content",
+      "precondition": "Presidio Running",
+      "test_input": {
+        "chunk_id": "test_card_1",
+        "asset_id": "A2",
+        "content_text": "card number 4716190207394368"
+      },
+      "test_steps": [
+        "Add: {\"chunk_id\": \"test_card_1\", \"asset_id\":\"A2\", \"content_text\": \"card number 4716190207394368\"}",
+        "Save file",
+        "Run: python3 scripts/analyze_chunks.py5",
+        "Open: data/result/scan_result_chunks.jsonl",
+        "Search for test_card_1"
+      ],
+      "expected_result": {
+        "entity_type": "CREDIT_CARD",
+        "correct_positions": true,
+        "score": ">=0.6"
+      },
+      "pass_criteria": [
+        "Entity type = CREDIT_CARD",
+        "Correct start and end positions",
+        "Score >= 0.6",
+        "CREDIT_CARD detected",
+        "No Detection OR wrong entity"
+      ],
+      "fail_criteria": [
+        "No Detection OR wrong entity"
+      ],
+      "test_type": "entity_detection",
+      "entity_type": "CREDIT_CARD",
+      "expected_entities": [
+        {
+          "text": "4716190207394368",
+          "type": "CREDIT_CARD",
+          "min_confidence": 0.6
+        }
+      ]
+    },
+    {
+      "test_id": "UC-02-04",
+      "test_name": "Detect Phone Number",
+      "description": "Detect phone number in text content",
+      "precondition": "Presidio Running",
+      "test_input": {
+        "chunk_id": "test_phone1",
+        "asset_id": "A3",
+        "content_text": "Contact: 9876543210"
+      },
+      "test_steps": [
+        "Add: {\"chunk_id\":\"test_phone1\",\"asset_id\":\"A3\",\"content_text\":\"Contact: 9876543210\"}",
+        "Save file",
+        "Run: python3 scripts/analyze_chunks.py5",
+        "Open: data/result/scan_result_chunks.jsonl",
+        "Search for test_phone_1"
+      ],
+      "expected_result": {
+        "entity_type": "PHONE_NUMBER",
+        "confidence": ">=0.7"
+      },
+      "pass_criteria": [
+        "PHONE_NUMBER entity detected",
+        "Confidence >= 0.7",
+        "PHONE_NUMBER present"
+      ],
+      "fail_criteria": [
+        "Entity missing or misclassified"
+      ],
+      "test_type": "entity_detection",
+      "entity_type": "PHONE_NUMBER",
+      "expected_entities": [
+        {
+          "text": "987654321O",
+          "type": "PHONE_NUMBER",
+          "min_confidence": 0.7
+        }
+      ]
+    },
+    {
+      "test_id": "UC-02-05",
+      "test_name": "Detect Person Name",
+      "description": "Detect person name in text content",
+      "precondition": "Presidio Running",
+      "test_input": {
+        "chunk_id": "test_person_1",
+        "asset_id": "A4",
+        "content_text": "Customer Name: Rahul Sharma"
+      },
+      "test_steps": [
+        "Add: {\"chunk_id\":\"test_person_1\",\"asset_id\":\"A4\",\"content_text\":\"Customer Name: Rahul Sharma\"}",
+        "Save file",
+        "Run: python3 scripts/analyze_chunks.py5",
+        "Open: data/result/scan_result_chunks.jsonl",
+        "Search for test_person_1"
+      ],
+      "expected_result": {
+        "entity_type": "PERSON",
+        "confidence": ">=0.7"
+      },
+      "pass_criteria": [
+        "PERSON entity detected",
+        "Confidence >= 0.7",
+        "PERSON present"
+      ],
+      "fail_criteria": [
+        "Entity missing or misclassified"
+      ],
+      "test_type": "entity_detection",
+      "entity_type": "PERSON",
+      "expected_entities": [
+        {
+          "text": "Rahul Sharma",
+          "type": "PERSON",
+          "min_confidence": 0.7
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "All test cases assume Docker Desktop is running",
+    "Port 5001 must be exposed and accessible",
+    "Test data should be added to scan_request_chunks.jsonl",
+    "Results are written to scan_result_chunks.jsonl",
+    "Confidence thresholds may need adjustment based on Presidio model version"
+  ]
+}

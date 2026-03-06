@@ -1,0 +1,8 @@
+services:
+  presidio-analyzer:
+    image: mcr.microsoft.com/presidio-analyzer:latest
+    container_name: presidio-analyzer
+    ports:
+      - "5001:3000"
+    environment:
+      - PRESIDIO_ANALYZER_LANGUAGE=en

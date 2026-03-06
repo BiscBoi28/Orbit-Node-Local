@@ -1,0 +1,86 @@
+{
+  "report_title": "JuiceShop High-Risk Users Report",
+  "generated_at": "2026-03-06T22:21:05.253111",
+  "total_high_risk_users": 5,
+  "high_risk_users": [
+    {
+      "record_id": "js_user:jim",
+      "user_key": "jim",
+      "risk_level": "CRITICAL",
+      "risk_score": 175.66,
+      "entity_types": [
+        "CREDIT_CARD",
+        "LOCATION",
+        "PERSON",
+        "US_BANK_NUMBER",
+        "US_SSN"
+      ],
+      "matched_combinations": [
+        "CREDIT_CARD + PERSON",
+        "CREDIT_CARD + LOCATION"
+      ]
+    },
+    {
+      "record_id": "js_user:bjoernGoogle",
+      "user_key": "bjoernGoogle",
+      "risk_level": "CRITICAL",
+      "risk_score": 164.58,
+      "entity_types": [
+        "CREDIT_CARD",
+        "EMAIL_ADDRESS",
+        "LOCATION",
+        "PERSON",
+        "PHONE_NUMBER",
+        "US_BANK_NUMBER"
+      ],
+      "matched_combinations": [
+        "CREDIT_CARD + EMAIL_ADDRESS",
+        "CREDIT_CARD + PERSON",
+        "CREDIT_CARD + LOCATION",
+        "EMAIL_ADDRESS + PHONE_NUMBER",
+        "LOCATION + PERSON + PHONE_NUMBER"
+      ]
+    },
+    {
+      "record_id": "js_user:bender",
+      "user_key": "bender",
+      "risk_level": "CRITICAL",
+      "risk_score": 151.08,
+      "entity_types": [
+        "CREDIT_CARD",
+        "LOCATION",
+        "PERSON",
+        "US_BANK_NUMBER",
+        "US_SSN"
+      ],
+      "matched_combinations": [
+        "CREDIT_CARD + PERSON",
+        "CREDIT_CARD + LOCATION"
+      ]
+    },
+    {
+      "record_id": "js_user:admin",
+      "user_key": "admin",
+      "risk_level": "CRITICAL",
+      "risk_score": 53.02,
+      "entity_types": [
+        "CREDIT_CARD",
+        "PHONE_NUMBER",
+        "US_BANK_NUMBER"
+      ],
+      "matched_combinations": []
+    },
+    {
+      "record_id": "js_user:test",
+      "user_key": "test",
+      "risk_level": "CRITICAL",
+      "risk_score": 41.84,
+      "entity_types": [
+        "PERSON",
+        "PHONE_NUMBER",
+        "US_BANK_NUMBER"
+      ],
+      "matched_combinations": []
+    }
+  ]
+}

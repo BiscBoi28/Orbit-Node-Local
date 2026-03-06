@@ -1,0 +1,21 @@
+{
+  "asset_id": "i-orbit-demo",
+  "chunk_count": 59,
+  "chunk_file": "scan_request_chunks.jsonl",
+  "data_safety": "public_juiceshop_seed_data",
+  "extractor_version": "quick-demo/1.1",
+  "generated_at": "2026-02-22T13:35:51.177755Z",
+  "hostname": "Biscuit",
+  "mode": "snapshot",
+  "notes": "Built from official OWASP Juice Shop seed files (runtime DB seed sources)",
+  "private_ip": "10.0.0.25",
+  "record_count": 39,
+  "request_id": "cd66a7c5-9b3f-46ad-829b-ad0da5b41eb6",
+  "schema_version": "orc-presidio-scanreq/v1",
+  "source_system": "juice-shop",
+  "source_types": [
+    "juiceshop-seed-deliveries",
+    "juiceshop-seed-security-questions",
+    "juiceshop-seed-users"
+  ]
+}

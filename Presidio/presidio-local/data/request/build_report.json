@@ -1,0 +1,23 @@
+{
+  "chunk_count": 59,
+  "chunk_size": 180,
+  "chunk_source_counts": {
+    "juiceshop-seed-deliveries": 3,
+    "juiceshop-seed-security-questions": 14,
+    "juiceshop-seed-users": 42
+  },
+  "generated_at": "2026-02-22T13:35:51.177755Z",
+  "included_files": [
+    "users.yml",
+    "securityQuestions.yml",
+    "deliveries.yml"
+  ],
+  "missing_files": [],
+  "record_count": 39,
+  "seed_dir": "/home/biscuit/sem4/DASS_Project/quick_demo/data/juice_shop",
+  "source_type_counts": {
+    "juiceshop-seed-deliveries": 3,
+    "juiceshop-seed-security-questions": 14,
+    "juiceshop-seed-users": 22
+  }
+}
