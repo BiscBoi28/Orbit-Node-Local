@@ -1,0 +1,184 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Reusable Windows CloudFormation template for ORBIT Bank infrastructure - supports Windows Server 2022 and Windows 11'
+
+Parameters:
+  Hostname:
+    Type: String
+    Description: 'Instance hostname'
+    MinLength: 1
+    MaxLength: 15
+    AllowedPattern: '^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$'
+    ConstraintDescription: 'Must be a valid Windows hostname (alphanumeric and hyphens, max 15 characters)'
+  
+  OperatingSystem:
+    Type: String
+    Description: 'Operating system type'
+    AllowedValues:
+      - WindowsServer2022
+      - Windows11
+    Default: WindowsServer2022
+  
+  InstanceType:
+    Type: String
+    Description: 'EC2 instance type'
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+    Default: t3.small
+  
+  SoftwarePackages:
+    Type: String
+    Description: 'Comma-separated list of software packages to install'
+    Default: ''
+  
+  SecurityGroupId:
+    Type: String
+    Description: 'Security group ID from pre-deployment stack'
+  
+  SubnetId:
+    Type: String
+    Description: 'Subnet ID from pre-deployment stack'
+  
+  InstanceProfileArn:
+    Type: String
+    Description: 'IAM instance profile ARN from pre-deployment stack'
+  
+  AssetId:
+    Type: String
+    Description: 'Asset identifier from CSV configuration'
+  
+  BusinessDomain:
+    Type: String
+    Description: 'Business domain tag'
+  
+  SensitivityLevel:
+    Type: String
+    Description: 'Data sensitivity level tag'
+
+  PreDeploymentStackName:
+    Type: String
+    Description: 'Name of the pre-deployment stack for importing values'
+    Default: 'njsecure-prod-pre-deployment'
+
+Conditions:
+  IsWindowsServer2022: !Equals [!Ref OperatingSystem, 'WindowsServer2022']
+  IsWindows11: !Equals [!Ref OperatingSystem, 'Windows11']
+  HasSoftwarePackages: !Not [!Equals [!Ref SoftwarePackages, '']]
+
+Mappings:
+  AmiMap:
+    WindowsServer2022:
+      SsmParameter: /aws/service/ami-windows-latest/Windows_Server-2022-English-Full-Base
+    Windows11:
+      SsmParameter: /aws/service/ami-windows-latest/Windows-11-English-Full-Base
+
+Resources:
+  Instance:
+    Type: AWS::EC2::Instance
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT30M
+        Count: 1
+    Properties:
+      ImageId: !Sub 
+        - '{{resolve:ssm:${SsmParam}}}'
+        - SsmParam: !FindInMap [AmiMap, !Ref OperatingSystem, SsmParameter]
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref InstanceProfileArn
+      SubnetId: !Ref SubnetId
+      SecurityGroupIds:
+        - !Ref SecurityGroupId
+        - Fn::ImportValue: !Sub '${PreDeploymentStackName}-WazuhAgentSecurityGroupId'
+      Tags:
+        - Key: Name
+          Value: !Ref Hostname
+        - Key: Asset_ID
+          Value: !Ref AssetId
+        - Key: Business_Domain
+          Value: !Ref BusinessDomain
+        - Key: Sensitivity_Level
+          Value: !Ref SensitivityLevel
+        - Key: project
+          Value: ORBIT
+        - Key: environment
+          Value: simulation
+        - Key: component
+          Value: bank-infrastructure
+      UserData:
+        Fn::Base64: !Sub |
+          <powershell>
+          # Logging function
+          function Write-Log {
+              param([string]$Message)
+              $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+              $logMessage = "[$timestamp] $Message"
+              Write-Output $logMessage
+              Add-Content -Path "C:\cloud-init-custom.log" -Value $logMessage
+          }
+          
+          Write-Log "Starting instance configuration for ${Hostname}"
+          
+          # Set hostname
+          Write-Log "Renaming computer to ${Hostname}"
+          Rename-Computer -NewName "${Hostname}" -Force -ErrorAction Stop
+          
+          # Install Chocolatey package manager
+          Write-Log "Installing Chocolatey package manager"
+          Set-ExecutionPolicy Bypass -Scope Process -Force
+          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+          try {
+              Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+              Write-Log "Chocolatey installed successfully"
+          } catch {
+              Write-Log "WARNING: Failed to install Chocolatey: $_"
+          }
+          
+          # Install software packages if specified
+          if ("${SoftwarePackages}" -ne "") {
+              Write-Log "Installing packages: ${SoftwarePackages}"
+              $packages = "${SoftwarePackages}" -split ","
+              foreach ($package in $packages) {
+                  $package = $package.Trim()
+                  if ($package -ne "") {
+                      Write-Log "Installing package: $package"
+                      try {
+                          choco install $package -y --no-progress --limit-output
+                          Write-Log "Successfully installed: $package"
+                      } catch {
+                          Write-Log "WARNING: Failed to install $package : $_"
+                      }
+                  }
+              }
+          }
+          
+          Write-Log "Instance configuration completed successfully"
+          
+          # Signal CloudFormation that the instance is ready
+          cfn-signal.exe -e $lastexitcode --stack ${AWS::StackName} --resource Instance --region ${AWS::Region}
+          </powershell>
+
+Outputs:
+  InstanceId:
+    Description: 'EC2 instance ID'
+    Value: !Ref Instance
+    Export:
+      Name: !Sub '${AWS::StackName}-InstanceId'
+  
+  PrivateIp:
+    Description: 'Private IP address'
+    Value: !GetAtt Instance.PrivateIp
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateIp'
+  
+  PublicIp:
+    Description: 'Public IP address (if assigned)'
+    Value: !GetAtt Instance.PublicIp
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicIp'
+  
+  Hostname:
+    Description: 'Instance hostname'
+    Value: !Ref Hostname
+    Export:
+      Name: !Sub '${AWS::StackName}-Hostname'

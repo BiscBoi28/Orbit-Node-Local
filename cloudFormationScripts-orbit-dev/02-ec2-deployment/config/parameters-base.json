@@ -1,0 +1,11 @@
+[
+  {"ParameterKey": "StackName",       "ParameterValue": "iiith-orbit-dev"},
+  {"ParameterKey": "Environment",     "ParameterValue": "dev"},
+  {"ParameterKey": "KeyName",         "ParameterValue": "iiith-orbit-key"},
+  {"ParameterKey": "Region",          "ParameterValue": "us-east-2"},
+  {"ParameterKey": "S3Bucket",        "ParameterValue": "iiith-orbit-wazuh-scripts"},
+  {"ParameterKey": "S3ScriptKey",     "ParameterValue": "orbit-dev/orbit-dev-setup.sh"},
+  {"ParameterKey": "WazuhManagerIp",  "ParameterValue": "18.116.159.176"},
+  {"ParameterKey": "InstanceType",    "ParameterValue": "t3.large"},
+  {"ParameterKey": "UseSpotInstance", "ParameterValue": "false"}
+]

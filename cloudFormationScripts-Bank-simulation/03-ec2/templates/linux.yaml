@@ -1,0 +1,151 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ORBIT Bank - Reusable Linux EC2 (RHEL 8, Ubuntu 22.04)
+
+Parameters:
+  AssetID:
+    Type: String
+    Description: Asset ID from CSV
+  Hostname:
+    Type: String
+    MinLength: 1
+    MaxLength: 63
+    AllowedPattern: '^[a-z0-9]([a-z0-9-]*[a-z0-9])?$'
+    Description: Instance hostname
+  TechnicalRole:
+    Type: String
+    Description: Technical role for tagging
+  OperatingSystem:
+    Type: String
+    AllowedValues:
+      - RHEL8
+      - Ubuntu2204
+    Description: OS type
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+    Description: EC2 instance type
+  SoftwarePackages:
+    Type: String
+    Default: ''
+    Description: Comma-separated packages to install
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID from pre-requirements
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet ID from pre-requirements
+  SecurityGroupIds:
+    Type: CommaDelimitedList
+    Description: Security group IDs from pre-requirements (role SGs)
+  InstanceProfileArn:
+    Type: String
+    Description: EC2 instance profile ARN
+  KeyPairName:
+    Type: String
+    Default: ''
+    Description: EC2 key pair name for SSH (leave empty to use SSM only)
+  WazuhServerIP:
+    Type: String
+    Default: ''
+    Description: Wazuh server IP for agent config
+  WazuhPort:
+    Type: String
+    Default: '1514'
+
+Conditions:
+  IsRHEL8: !Equals [!Ref OperatingSystem, 'RHEL8']
+  IsUbuntu2204: !Equals [!Ref OperatingSystem, 'Ubuntu2204']
+  HasSoftware: !Not [!Equals [!Ref SoftwarePackages, '']]
+  HasKeyPair: !Not [!Equals [!Ref KeyPairName, '']]
+
+Mappings:
+  AmiMap:
+    RHEL8:
+      SsmParam: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+    Ubuntu2204:
+      SsmParam: /aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id
+
+Resources:
+  Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Sub
+        - '{{resolve:ssm:${SsmParam}}}'
+        - SsmParam: !FindInMap [AmiMap, !Ref OperatingSystem, SsmParam]
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Select [1, !Split ['/', !Ref InstanceProfileArn]]
+      KeyName: !If [HasKeyPair, !Ref KeyPairName, !Ref 'AWS::NoValue']
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          GroupSet: !Ref SecurityGroupIds
+          SubnetId: !Ref SubnetId
+      Tags:
+        - Key: Name
+          Value: !Ref Hostname
+        - Key: Project
+          Value: ORBIT
+        - Key: Environment
+          Value: simulation
+        - Key: Component
+          Value: bank-infrastructure
+        - Key: Asset_ID
+          Value: !Ref AssetID
+        - Key: Hostname
+          Value: !Ref Hostname
+        - Key: Technical_Role
+          Value: !Ref TechnicalRole
+      UserData:
+        Fn::Base64: !Sub
+          - |
+            #!/bin/bash
+            set -e
+            exec > >(tee -a /var/log/user-data.log) 2>&1
+            echo "[$(date -Iseconds)] Starting config for ${Hostname}"
+            hostnamectl set-hostname ${Hostname}
+            echo "127.0.0.1 ${Hostname}" >> /etc/hosts
+            if [[ "${OperatingSystem}" == "RHEL8" ]]; then
+              yum update -y
+              if [[ -n "${SoftwarePackages}" ]]; then
+                for p in $(echo "${SoftwarePackages}" | tr ',' ' '); do yum install -y "$p" || true; done
+              fi
+            elif [[ "${OperatingSystem}" == "Ubuntu2204" ]]; then
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update && apt-get upgrade -y
+              if [[ -n "${SoftwarePackages}" ]]; then
+                for p in $(echo "${SoftwarePackages}" | tr ',' ' '); do apt-get install -y "$p" || true; done
+              fi
+            fi
+            echo "[$(date -Iseconds)] Config done"
+            if command -v cfn-signal >/dev/null 2>&1; then
+              /usr/local/bin/cfn-signal -e 0 --stack ${AWS::StackName} --resource Instance --region ${AWS::Region}
+            fi
+          - Hostname: !Ref Hostname
+            OperatingSystem: !Ref OperatingSystem
+            SoftwarePackages: !Ref SoftwarePackages
+
+Outputs:
+  InstanceId:
+    Description: EC2 instance ID
+    Value: !Ref Instance
+    Export:
+      Name: !Sub '${AWS::StackName}-InstanceId'
+  PrivateIp:
+    Description: Private IP
+    Value: !GetAtt Instance.PrivateIp
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateIp'
+  PublicIp:
+    Description: Public IP
+    Value: !GetAtt Instance.PublicIp
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicIp'
+  Hostname:
+    Description: Hostname
+    Value: !Ref Hostname
+    Export:
+      Name: !Sub '${AWS::StackName}-Hostname'

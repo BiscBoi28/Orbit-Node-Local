@@ -1,0 +1,10 @@
+[2026-02-25 20:27:40] [INFO] Log file: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/logs/deploy_machine_2_20260225_202740.log
+[2026-02-25 20:27:42] [INFO] Machine 2 (NS-02): EC2 ns-02 (started)
+[2026-02-25 20:27:49] [INFO] Deploying njsecure-prod-ec2-ns-02 (linux)
+
+Waiting for changeset to be created..
+Waiting for stack create/update to complete
+Successfully created/updated stack - njsecure-prod-ec2-ns-02
+[2026-02-25 20:28:29] [INFO] EC2 create finished
+[2026-02-25 20:28:31] [INFO] Machine 2 (NS-02): EC2 ns-02 (completed)
+[2026-02-25 20:28:31] [INFO] Machine 2 deploy finished. Log: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/logs/deploy_machine_2_20260225_202740.log

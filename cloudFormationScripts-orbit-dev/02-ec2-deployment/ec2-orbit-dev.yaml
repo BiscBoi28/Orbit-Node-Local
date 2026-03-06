@@ -1,0 +1,295 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'ORBIT Dev Node EC2 - Downloads orbit-dev-setup.sh from S3 and runs it'
+
+Parameters:
+  VpcId:
+    Type: String
+    Description: VPC ID from orbit-dev pre-deployment stack output
+
+  SubnetId:
+    Type: String
+    Description: Subnet ID from orbit-dev pre-deployment stack output
+
+  SecurityGroupId:
+    Type: String
+    Description: Security Group ID from orbit-dev pre-deployment stack output
+
+  InstanceProfileArn:
+    Type: String
+    Description: IAM Instance Profile ARN from orbit-dev pre-deployment stack output
+
+  DataVolumeId:
+    Type: String
+    Description: EBS Volume ID from orbit-dev pre-deployment stack output
+
+  ElasticIPAllocationId:
+    Type: String
+    Description: Elastic IP Allocation ID from orbit-dev pre-deployment stack output
+
+  ElasticIP:
+    Type: String
+    Description: Elastic IP address from orbit-dev pre-deployment stack output
+
+  DataMountPath:
+    Type: String
+    Default: '/data'
+    Description: Mount path for persistent data
+
+  EbsDeviceName:
+    Type: String
+    Default: '/dev/sdf'
+    Description: EBS device name for volume attachment
+
+  InstanceType:
+    Type: String
+    Default: t3.large
+    AllowedValues:
+      - t3.large
+      - t3.xlarge
+      - t3.2xlarge
+    Description: >
+      EC2 instance type. t3.large (8 GB) is the minimum for running Neo4j + Presidio + JuiceShop.
+      Use t3.xlarge (16 GB) if Neo4j performance is slow.
+
+  UseSpotInstance:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Use Spot instance to reduce cost (true) or On-Demand for stability (false)
+
+  MaxSpotPrice:
+    Type: String
+    Default: '0.08'
+    Description: Max Spot price per hour. Only used when UseSpotInstance is true.
+
+  SetupScriptS3Url:
+    Type: String
+    Description: >
+      S3 HTTPS URL for orbit-dev-setup.sh
+      (e.g. https://iiith-orbit-wazuh-scripts.s3.us-east-2.amazonaws.com/orbit-dev/orbit-dev-setup.sh)
+
+  WazuhManagerIp:
+    Type: String
+    Default: '18.116.159.176'
+    Description: Elastic IP of the wazuh-dev EC2 (Wazuh manager)
+
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: EC2 key pair for SSH access
+
+Conditions:
+  UseSpotInstance: !Equals [!Ref UseSpotInstance, 'true']
+
+Resources:
+  OrbitDevLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: orbit-dev-template
+      LaunchTemplateData:
+        InstanceType: !Ref InstanceType
+        ImageId: !Sub '{{resolve:ssm:/aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id}}'
+        KeyName: !Ref KeyName
+        IamInstanceProfile:
+          Arn: !Ref InstanceProfileArn
+        SecurityGroupIds:
+          - !Ref SecurityGroupId
+        InstanceMarketOptions: !If
+          - UseSpotInstance
+          - MarketType: spot
+            SpotOptions:
+              MaxPrice: !Ref MaxSpotPrice
+              SpotInstanceType: one-time
+          - !Ref AWS::NoValue
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: orbit-dev
+              - Key: Environment
+                Value: dev
+              - Key: Component
+                Value: orbit-dev
+              - Key: Owner
+                Value: orbit
+              - Key: project
+                Value: iiith-orbit-node
+              - Key: created_by
+                Value: vvithala
+              - Key: resource_type
+                Value: dev
+        UserData:
+          Fn::Base64:
+            !Sub |
+              #!/bin/bash
+              set -e
+              exec > >(tee /var/log/user-data.log) 2>&1
+
+              echo "=========================================="
+              echo "orbit-dev Bootstrap - $(date)"
+              echo "=========================================="
+
+              export DEBIAN_FRONTEND=noninteractive
+              export DATA_MOUNT_PATH="${DataMountPath}"
+              export WAZUH_MANAGER_IP="${WazuhManagerIp}"
+
+              # ------------------------------------------------
+              # 1. System update + prerequisites
+              # ------------------------------------------------
+              echo "[1/4] Installing prerequisites..."
+              apt-get update && apt-get upgrade -y
+              apt-get install -y \
+                ca-certificates curl gnupg lsb-release \
+                git jq awscli unzip
+
+              # ------------------------------------------------
+              # 2. Docker (CE + Compose plugin)
+              # ------------------------------------------------
+              echo "[2/4] Installing Docker..."
+              mkdir -p /etc/apt/keyrings
+              curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+                | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+              echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+                https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+                | tee /etc/apt/sources.list.d/docker.list > /dev/null
+              apt-get update
+              apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+              usermod -aG docker ubuntu
+              systemctl enable docker
+              systemctl start docker
+              echo "Waiting for Docker daemon to be ready..."
+              for i in $(seq 1 30); do
+                if docker info >/dev/null 2>&1; then
+                  echo "✓ Docker ready"
+                  break
+                fi
+                if [ "$i" -eq 30 ]; then
+                  echo "ERROR: Docker not ready after 60s"
+                  exit 1
+                fi
+                sleep 2
+              done
+
+              # ------------------------------------------------
+              # 3. Mount EBS volume
+              # ------------------------------------------------
+              echo "[3/4] Mounting EBS volume..."
+              export AWS_DEFAULT_REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
+
+              sleep 10
+              DEVICE=""
+              for i in $(seq 1 30); do
+                [ -b /dev/nvme1n1 ] && DEVICE=/dev/nvme1n1 && break
+                [ -b ${EbsDeviceName} ]  && DEVICE=${EbsDeviceName}  && break
+                sleep 2
+              done
+
+              if [ -z "$DEVICE" ]; then
+                echo "ERROR: EBS device not found after 60s"
+                exit 1
+              fi
+
+              if ! blkid "$DEVICE" 2>/dev/null; then
+                mkfs -t ext4 "$DEVICE"
+              fi
+
+              mkdir -p "$DATA_MOUNT_PATH"
+              mount "$DEVICE" "$DATA_MOUNT_PATH"
+              UUID=$(blkid -s UUID -o value "$DEVICE")
+              echo "UUID=$UUID $DATA_MOUNT_PATH ext4 defaults,nofail 0 2" >> /etc/fstab
+              echo "✓ EBS mounted at $DATA_MOUNT_PATH ($DEVICE)"
+
+              # Create top-level directories now so setup script doesn't have to
+              mkdir -p "$DATA_MOUNT_PATH"/{orbit-dev,scripts,neo4j/{data,logs,import,plugins},presidio,orc/html}
+              chown -R ubuntu:ubuntu "$DATA_MOUNT_PATH"
+
+              # ------------------------------------------------
+              # 4. Download and run orbit-dev-setup.sh
+              # ------------------------------------------------
+              echo "[4/4] Downloading scripts from S3..."
+              S3_URL="${SetupScriptS3Url}"
+              BUCKET=$(echo "$S3_URL" | sed 's|https://\([^.]*\)\.s3\..*|\1|')
+              KEY=$(echo "$S3_URL" | sed 's|https://[^/]*/||')
+              aws s3 cp "s3://$BUCKET/$KEY" "$DATA_MOUNT_PATH/scripts/orbit-dev-setup.sh"
+              chmod +x "$DATA_MOUNT_PATH/scripts/orbit-dev-setup.sh"
+              KEY_HEALTH=$(echo "$KEY" | sed 's|orbit-dev-setup\.sh|health-check.sh|')
+              KEY_START=$(echo "$KEY" | sed 's|orbit-dev-setup\.sh|start-services.sh|')
+              aws s3 cp "s3://$BUCKET/$KEY_HEALTH" "$DATA_MOUNT_PATH/scripts/health-check.sh" 2>/dev/null || true
+              aws s3 cp "s3://$BUCKET/$KEY_START" "$DATA_MOUNT_PATH/scripts/start-services.sh" 2>/dev/null || true
+              for f in "$DATA_MOUNT_PATH/scripts/health-check.sh" "$DATA_MOUNT_PATH/scripts/start-services.sh"; do [ -f "$f" ] && chmod +x "$f"; done
+
+              echo "Running orbit-dev-setup.sh..."
+              DATA_MOUNT_PATH="$DATA_MOUNT_PATH" \
+              WAZUH_MANAGER_IP="$WAZUH_MANAGER_IP" \
+              AWS_DEFAULT_REGION="$AWS_DEFAULT_REGION" \
+                bash "$DATA_MOUNT_PATH/scripts/orbit-dev-setup.sh" 2>&1 \
+                | tee /var/log/orbit-dev-setup.log
+
+              echo "=========================================="
+              echo "orbit-dev Bootstrap Complete - $(date)"
+              echo "=========================================="
+
+  OrbitDevInstance:
+    Type: AWS::EC2::Instance
+    DependsOn: OrbitDevLaunchTemplate
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref OrbitDevLaunchTemplate
+        Version: !GetAtt OrbitDevLaunchTemplate.LatestVersionNumber
+      SubnetId: !Ref SubnetId
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 30
+            VolumeType: gp3
+            DeleteOnTermination: true
+      Tags:
+        - Key: Name
+          Value: orbit-dev
+        - Key: project
+          Value: iiith-orbit-node
+        - Key: created_by
+          Value: vvithala
+        - Key: resource_type
+          Value: dev
+
+  VolumeAttachment:
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      Device: !Ref EbsDeviceName
+      InstanceId: !Ref OrbitDevInstance
+      VolumeId: !Ref DataVolumeId
+
+  EIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      InstanceId: !Ref OrbitDevInstance
+      AllocationId: !Ref ElasticIPAllocationId
+
+Outputs:
+  InstanceId:
+    Description: orbit-dev EC2 Instance ID
+    Value: !Ref OrbitDevInstance
+    Export:
+      Name: !Sub '${AWS::StackName}-InstanceId'
+
+  PublicIp:
+    Description: orbit-dev Elastic IP
+    Value: !Ref ElasticIP
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicIp'
+
+  Neo4jBrowserUrl:
+    Description: Neo4j Browser UI
+    Value: !Sub 'http://${ElasticIP}:7474'
+
+  PresidioUrl:
+    Description: Presidio Analyzer API
+    Value: !Sub 'http://${ElasticIP}:5001'
+
+  JuiceShopUrl:
+    Description: OWASP Juice Shop
+    Value: !Sub 'http://${ElasticIP}:3000'
+
+  OrcUrl:
+    Description: ORC service (placeholder initially)
+    Value: !Sub 'http://${ElasticIP}:8000'

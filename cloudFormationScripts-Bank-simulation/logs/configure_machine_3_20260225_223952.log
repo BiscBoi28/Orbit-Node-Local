@@ -1,0 +1,38 @@
+[2026-02-25 22:39:52] [INFO] Log file: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/logs/configure_machine_3_20260225_223952.log
+[2026-02-25 22:39:52] [INFO] Configure machine 3 (NS-03) started
+[2026-02-25 22:39:53] [INFO] Machine 3 host: corp-ad-01
+[2026-02-25 22:39:53] [INFO] Machine 3: Generate inventory (started)
+[2026-02-25 22:40:08] [INFO] Generated /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/inventory/host_software.yml
+[2026-02-25 22:40:08] [INFO] Generated /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/inventory/hosts.ini
+[2026-02-25 22:40:08] [INFO] Machine 3: Generate inventory (completed)
+[2026-02-25 22:40:08] [INFO] Inventory: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/inventory/hosts.ini
+[2026-02-25 22:40:08] [INFO] Using AWS SSM for Ansible (no SSH key)
+[2026-02-25 22:40:08] [INFO] Using host_software: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/inventory/host_software.yml
+[2026-02-25 22:40:08] [INFO] Machine 3: Install software (started) -- playbook install_software_windows.yaml --limit corp-ad-01
+ERROR! couldn't resolve module/action 'community.windows.win_chocolatey'. This often indicates a misspelling, missing collection, or incorrect module path.
+
+The error appears to be in '/Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/playbooks/install_software_windows.yaml': line 9, column 7, but may
+be elsewhere in the file depending on the exact syntax problem.
+
+The offending line appears to be:
+
+  tasks:
+    - name: Install Chocolatey packages
+      ^ here
+[2026-02-25 22:40:08] [WARN] Machine 3: Install software (completed with errors, check Ansible output above)
+[2026-02-25 22:40:08] [INFO] Machine 3: Register Wazuh agent (started) -- playbook register_wazuh_agent.yaml --limit corp-ad-01
+[WARNING]: Found variable using reserved name: retries
+
+PLAY [Register Wazuh agent (Linux)] ********************************************
+skipping: no hosts matched
+
+PLAY [Register Wazuh agent (Windows)] ******************************************
+
+TASK [Gathering Facts] *********************************************************
+fatal: [corp-ad-01]: UNREACHABLE! => {"changed": false, "msg": "DISABLE PROMPT command 'PS1='' ; bind 'set enable-bracketed-paste off'; printf '\\n%s\\n' 'sCryufDdLAZYkbJqglLEcNQrfO'\n' timeout on host: i-083e996cc6fb1f848", "unreachable": true}
+
+PLAY RECAP *********************************************************************
+corp-ad-01                 : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0   
+
+[2026-02-25 22:45:07] [WARN] Machine 3: Register Wazuh agent (completed with errors, check Ansible output above)
+[2026-02-25 22:45:07] [INFO] Configure machine 3 finished. Full log: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/logs/configure_machine_3_20260225_223952.log

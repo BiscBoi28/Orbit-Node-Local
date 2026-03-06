@@ -1,0 +1,27 @@
+---
+# Wazuh installation paths
+wazuh_dir: /opt/wazuh-docker
+data_mount_path: /data
+
+# Wazuh credentials
+indexer_username: admin
+indexer_password: SecretPassword
+api_username: wazuh-wui
+api_password: "Wazuh@2024Pass"
+
+# Wazuh versions
+wazuh_version: "4.14.2"
+cert_generator_version: "0.0.3"
+
+# Docker settings
+docker_compose_version: "2.0"
+
+# Memory settings (JVM heap size)
+indexer_memory_min: "512m"
+indexer_memory_max: "512m"
+
+# Indexer ulimits
+indexer_memlock_soft: -1
+indexer_memlock_hard: -1
+indexer_nofile_soft: 65536
+indexer_nofile_hard: 65536

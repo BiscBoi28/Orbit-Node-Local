@@ -1,0 +1,191 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Reusable Linux CloudFormation template for ORBIT Bank infrastructure - supports RHEL 8 and Ubuntu 22.04'
+
+Parameters:
+  Hostname:
+    Type: String
+    Description: 'Instance hostname'
+    MinLength: 1
+    MaxLength: 63
+    AllowedPattern: '^[a-z0-9]([a-z0-9-]*[a-z0-9])?$'
+    ConstraintDescription: 'Must be a valid hostname (lowercase alphanumeric and hyphens)'
+  
+  OperatingSystem:
+    Type: String
+    Description: 'Operating system type'
+    AllowedValues:
+      - RHEL8
+      - Ubuntu2204
+    Default: RHEL8
+  
+  InstanceType:
+    Type: String
+    Description: 'EC2 instance type'
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+    Default: t3.small
+  
+  SoftwarePackages:
+    Type: String
+    Description: 'Comma-separated list of software packages to install'
+    Default: ''
+  
+  SecurityGroupId:
+    Type: String
+    Description: 'Security group ID from pre-deployment stack'
+  
+  SubnetId:
+    Type: String
+    Description: 'Subnet ID from pre-deployment stack'
+  
+  InstanceProfileArn:
+    Type: String
+    Description: 'IAM instance profile ARN from pre-deployment stack'
+  
+  AssetId:
+    Type: String
+    Description: 'Asset identifier from CSV configuration'
+  
+  BusinessDomain:
+    Type: String
+    Description: 'Business domain tag'
+  
+  SensitivityLevel:
+    Type: String
+    Description: 'Data sensitivity level tag'
+
+  PreDeploymentStackName:
+    Type: String
+    Description: 'Name of the pre-deployment stack for importing values'
+    Default: 'njsecure-prod-pre-deployment'
+
+Conditions:
+  IsRHEL8: !Equals [!Ref OperatingSystem, 'RHEL8']
+  IsUbuntu2204: !Equals [!Ref OperatingSystem, 'Ubuntu2204']
+  HasSoftwarePackages: !Not [!Equals [!Ref SoftwarePackages, '']]
+
+Mappings:
+  AmiMap:
+    RHEL8:
+      SsmParameter: /aws/service/rhel/8/latest/x86_64
+    Ubuntu2204:
+      SsmParameter: /aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id
+
+Resources:
+  Instance:
+    Type: AWS::EC2::Instance
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT15M
+        Count: 1
+    Properties:
+      ImageId: !Sub 
+        - '{{resolve:ssm:${SsmParam}}}'
+        - SsmParam: !FindInMap [AmiMap, !Ref OperatingSystem, SsmParameter]
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref InstanceProfileArn
+      SubnetId: !Ref SubnetId
+      SecurityGroupIds:
+        - !Ref SecurityGroupId
+        - Fn::ImportValue: !Sub '${PreDeploymentStackName}-WazuhAgentSecurityGroupId'
+      Tags:
+        - Key: Name
+          Value: !Ref Hostname
+        - Key: Asset_ID
+          Value: !Ref AssetId
+        - Key: Business_Domain
+          Value: !Ref BusinessDomain
+        - Key: Sensitivity_Level
+          Value: !Ref SensitivityLevel
+        - Key: project
+          Value: ORBIT
+        - Key: environment
+          Value: simulation
+        - Key: component
+          Value: bank-infrastructure
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -e
+          
+          # Logging function
+          log() {
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a /var/log/cloud-init-custom.log
+          }
+          
+          log "Starting instance configuration for ${Hostname}"
+          
+          # Set hostname
+          log "Setting hostname to ${Hostname}"
+          hostnamectl set-hostname ${Hostname}
+          
+          # Update /etc/hosts
+          echo "127.0.0.1 ${Hostname}" >> /etc/hosts
+          
+          # Update system and install packages based on OS
+          if [[ "${OperatingSystem}" == "RHEL8" ]]; then
+            log "Detected RHEL8 - updating system with yum"
+            yum update -y
+            
+            # Install CloudFormation helper scripts
+            yum install -y python3-pip
+            pip3 install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-py3-latest.tar.gz
+            
+            # Install software packages if specified
+            if [[ -n "${SoftwarePackages}" ]]; then
+              log "Installing packages: ${SoftwarePackages}"
+              # Replace commas with spaces for yum
+              PACKAGES=$(echo "${SoftwarePackages}" | tr ',' ' ')
+              yum install -y $PACKAGES || log "WARNING: Some packages failed to install"
+            fi
+            
+          elif [[ "${OperatingSystem}" == "Ubuntu2204" ]]; then
+            log "Detected Ubuntu 22.04 - updating system with apt-get"
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update
+            apt-get upgrade -y
+            
+            # Install CloudFormation helper scripts
+            apt-get install -y python3-pip
+            pip3 install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-py3-latest.tar.gz
+            
+            # Install software packages if specified
+            if [[ -n "${SoftwarePackages}" ]]; then
+              log "Installing packages: ${SoftwarePackages}"
+              # Replace commas with spaces for apt-get
+              PACKAGES=$(echo "${SoftwarePackages}" | tr ',' ' ')
+              apt-get install -y $PACKAGES || log "WARNING: Some packages failed to install"
+            fi
+          fi
+          
+          log "Instance configuration completed successfully"
+          
+          # Signal CloudFormation that the instance is ready
+          /usr/local/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Instance --region ${AWS::Region}
+
+Outputs:
+  InstanceId:
+    Description: 'EC2 instance ID'
+    Value: !Ref Instance
+    Export:
+      Name: !Sub '${AWS::StackName}-InstanceId'
+  
+  PrivateIp:
+    Description: 'Private IP address'
+    Value: !GetAtt Instance.PrivateIp
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateIp'
+  
+  PublicIp:
+    Description: 'Public IP address (if assigned)'
+    Value: !GetAtt Instance.PublicIp
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicIp'
+  
+  Hostname:
+    Description: 'Instance hostname'
+    Value: !Ref Hostname
+    Export:
+      Name: !Sub '${AWS::StackName}-Hostname'

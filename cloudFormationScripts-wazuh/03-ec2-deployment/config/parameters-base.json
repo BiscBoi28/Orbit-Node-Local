@@ -1,0 +1,8 @@
+[
+  {"ParameterKey": "StackName", "ParameterValue": "iiith-orbit-node"},
+  {"ParameterKey": "Environment", "ParameterValue": "dev"},
+  {"ParameterKey": "KeyName", "ParameterValue": "iiith-orbit-key"},
+  {"ParameterKey": "Region", "ParameterValue": "us-east-2"},
+  {"ParameterKey": "S3Bucket", "ParameterValue": "iiith-orbit-wazuh-scripts"},
+  {"ParameterKey": "S3ScriptKey", "ParameterValue": "wazuh-setup.sh"}
+]

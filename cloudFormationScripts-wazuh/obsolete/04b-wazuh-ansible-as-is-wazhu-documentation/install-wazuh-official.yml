@@ -1,0 +1,81 @@
+---
+- name: Install Wazuh using Official Documentation Method
+  hosts: wazuh_server
+  become: yes
+
+  tasks:
+    - name: Get list of Wazuh containers
+      shell: docker ps -a --filter "name=wazuh" -q
+      register: wazuh_containers
+      ignore_errors: yes
+
+    - name: Stop Wazuh containers
+      shell: docker stop {{ wazuh_containers.stdout_lines | join(' ') }}
+      when: wazuh_containers.stdout_lines | length > 0
+      ignore_errors: yes
+
+    - name: Remove Wazuh containers
+      shell: docker rm {{ wazuh_containers.stdout_lines | join(' ') }}
+      when: wazuh_containers.stdout_lines | length > 0
+      ignore_errors: yes
+
+    - name: Stop nginx if running
+      shell: systemctl stop nginx 2>/dev/null || killall nginx 2>/dev/null || true
+      ignore_errors: yes
+
+    - name: Install git
+      apt:
+        name: git
+        state: present
+        update_cache: yes
+
+    - name: Clone Wazuh Docker repository
+      git:
+        repo: https://github.com/wazuh/wazuh-docker.git
+        dest: /opt/wazuh-docker
+        version: v4.14.2
+        force: yes
+
+    - name: Generate certificates
+      shell: |
+        cd /opt/wazuh-docker/single-node
+        docker compose -f generate-indexer-certs.yml run --rm generator
+      args:
+        creates: /opt/wazuh-docker/single-node/config/wazuh_indexer_ssl_certs/root-ca.pem
+
+    - name: Start Wazuh stack
+      community.docker.docker_compose_v2:
+        project_src: /opt/wazuh-docker/single-node
+        state: present
+
+    - name: Wait for indexer to be ready
+      uri:
+        url: https://127.0.0.1:9200
+        user: admin
+        password: SecretPassword
+        validate_certs: no
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 30
+      delay: 10
+
+    - name: Wait for dashboard to be ready
+      uri:
+        url: https://127.0.0.1:443
+        validate_certs: no
+        status_code: [200, 302]
+      register: result
+      until: result.status in [200, 302]
+      retries: 30
+      delay: 10
+
+    - name: Display completion message
+      debug:
+        msg:
+          - "Wazuh installation complete!"
+          - "Dashboard: https://{{ ansible_host }}"
+          - "Username: admin"
+          - "Password: SecretPassword"
+          - ""
+          - "Access via: https://{{ ansible_host }}"

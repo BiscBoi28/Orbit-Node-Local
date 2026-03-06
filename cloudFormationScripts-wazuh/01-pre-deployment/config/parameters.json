@@ -1,0 +1,26 @@
+[
+  {
+    "ParameterKey": "VpcId",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "SubnetId",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "AdminIpCidr",
+    "ParameterValue": "0.0.0.0/0"
+  },
+  {
+    "ParameterKey": "EbsVolumeSize",
+    "ParameterValue": "100"
+  },
+  {
+    "ParameterKey": "EbsDeviceName",
+    "ParameterValue": "/dev/sdf"
+  },
+  {
+    "ParameterKey": "DataMountPath",
+    "ParameterValue": "/data"
+  }
+]

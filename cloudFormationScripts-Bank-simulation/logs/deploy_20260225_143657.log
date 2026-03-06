@@ -1,0 +1,50 @@
+[2026-02-25 14:36:57] [INFO] Log file: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/logs/deploy_20260225_143657.log
+[2026-02-25 14:36:59] [INFO] Step 01: Pre-requirements (started)
+[2026-02-25 14:36:59] [INFO] Creating stack njsecure-prod-pre-requirements
+
+Waiting for changeset to be created..
+
+No changes to deploy. Stack njsecure-prod-pre-requirements is up to date
+[2026-02-25 14:37:03] [INFO] Stack njsecure-prod-pre-requirements CREATE_COMPLETE
+[2026-02-25 14:37:04] [INFO] Step 01: Pre-requirements (completed)
+[2026-02-25 14:37:04] [INFO] Step 02: Secrets (started)
+[2026-02-25 14:37:04] [INFO] Creating stack njsecure-prod-secrets
+
+Waiting for changeset to be created..
+
+No changes to deploy. Stack njsecure-prod-secrets is up to date
+[2026-02-25 14:37:08] [INFO] Stack njsecure-prod-secrets CREATE_COMPLETE
+[2026-02-25 14:37:10] [INFO] Step 02: Secrets (completed)
+[2026-02-25 14:37:10] [INFO] Step 03: EC2 (started)
+[2026-02-25 14:37:17] [INFO] Deploying njsecure-prod-ec2-ns-01 (linux)
+[2026-02-25 14:37:19] [INFO] Deploying njsecure-prod-ec2-ns-02 (linux)
+
+Waiting for changeset to be created..
+
+Waiting for changeset to be created..
+[2026-02-25 14:37:22] [INFO] Deploying njsecure-prod-ec2-ns-03 (windows)
+Waiting for stack create/update to complete
+
+Waiting for changeset to be created..
+Waiting for stack create/update to complete
+Waiting for stack create/update to complete
+
+Failed to create/update the stack. Run the following command
+to fetch the list of events leading up to the failure
+aws cloudformation describe-stack-events --stack-name njsecure-prod-ec2-ns-03
+
+Failed to create/update the stack. Run the following command
+to fetch the list of events leading up to the failure
+aws cloudformation describe-stack-events --stack-name njsecure-prod-ec2-ns-02
+
+Failed to create/update the stack. Run the following command
+to fetch the list of events leading up to the failure
+aws cloudformation describe-stack-events --stack-name njsecure-prod-ec2-ns-01
+[2026-02-25 14:55:34] [INFO] EC2 create finished
+[2026-02-25 14:55:35] [INFO] Step 03: EC2 (completed)
+[2026-02-25 14:55:35] [INFO] Step 04: Generate inventory (started)
+[2026-02-25 14:55:37] [INFO] Generated /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/inventory/host_software.yml
+[2026-02-25 14:55:37] [INFO] Generated /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/inventory/hosts.ini
+[2026-02-25 14:55:37] [INFO] Step 04: Generate inventory (completed)
+[2026-02-25 14:55:37] [INFO] Step 04: Configuration (started)
+/Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/05-orchestrator/deploy_all.sh: line 61: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/run.sh: Permission denied

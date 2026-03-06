@@ -1,0 +1,140 @@
+---
+- name: Install Wazuh on ORBIT Node
+  hosts: wazuh_server
+  become: yes
+
+  tasks:
+    - name: Create Wazuh config directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ wazuh_dir }}/config/wazuh_indexer_ssl_certs"
+        - "{{ wazuh_dir }}/config/wazuh_indexer"
+        - "{{ wazuh_dir }}/config/wazuh_dashboard"
+
+    - name: Create certs.yml from template
+      template:
+        src: templates/certs.yml.j2
+        dest: "{{ wazuh_dir }}/config/certs.yml"
+
+    - name: Generate SSL certificates
+      community.docker.docker_container:
+        name: wazuh-certs-generator
+        image: "wazuh/wazuh-certs-generator:{{ cert_generator_version }}"
+        state: started
+        detach: false
+        cleanup: true
+        env:
+          CERT_TOOL_VERSION: "4.14"
+        volumes:
+          - "{{ wazuh_dir }}/config/wazuh_indexer_ssl_certs:/certificates"
+          - "{{ wazuh_dir }}/config/certs.yml:/config/certs.yml"
+
+    - name: Create indexer configuration from template
+      template:
+        src: templates/wazuh.indexer.yml.j2
+        dest: "{{ wazuh_dir }}/config/wazuh_indexer/wazuh.indexer.yml"
+
+    - name: Download internal_users.yml
+      get_url:
+        url: "https://raw.githubusercontent.com/wazuh/wazuh-docker/v{{ wazuh_version }}/single-node/config/wazuh_indexer/internal_users.yml"
+        dest: "{{ wazuh_dir }}/config/wazuh_indexer/internal_users.yml"
+        mode: '0644'
+
+    - name: Create dashboard configuration from template
+      template:
+        src: templates/opensearch_dashboards.yml.j2
+        dest: "{{ wazuh_dir }}/config/wazuh_dashboard/opensearch_dashboards.yml"
+
+    - name: Create Wazuh API configuration from template
+      template:
+        src: templates/wazuh.yml.j2
+        dest: "{{ wazuh_dir }}/config/wazuh_dashboard/wazuh.yml"
+
+    - name: Create docker-compose.yml from template
+      template:
+        src: templates/docker-compose.yml.j2
+        dest: "{{ wazuh_dir }}/docker-compose.yml"
+
+    - name: Set correct permissions on wazuh-indexer data directory
+      file:
+        path: "{{ data_mount_path }}/wazuh-indexer"
+        owner: 1000
+        group: 1000
+        recurse: yes
+        state: directory
+
+    - name: Start Wazuh services
+      community.docker.docker_compose_v2:
+        project_src: "{{ wazuh_dir }}"
+        state: present
+
+    - name: Wait for indexer to be ready
+      uri:
+        url: https://127.0.0.1:9200
+        user: "{{ indexer_username }}"
+        password: "{{ indexer_password }}"
+        validate_certs: no
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 30
+      delay: 10
+
+    - name: Run securityadmin
+      shell: |
+        docker exec $(docker ps -q --filter "name=wazuh.indexer") bash -c '
+        export JAVA_HOME=/usr/share/wazuh-indexer/jdk && 
+        /usr/share/wazuh-indexer/plugins/opensearch-security/tools/securityadmin.sh \
+        -cd /usr/share/wazuh-indexer/config/opensearch-security/ \
+        -icl -nhnv \
+        -cacert /usr/share/wazuh-indexer/config/certs/root-ca.pem \
+        -cert /usr/share/wazuh-indexer/config/certs/admin.pem \
+        -key /usr/share/wazuh-indexer/config/certs/admin-key.pem \
+        -h 127.0.0.1 -p 9200'
+      ignore_errors: yes
+
+    - name: Restart dashboard
+      shell: docker restart $(docker ps -q --filter "name=wazuh.dashboard")
+
+    - name: Create Nginx configuration from template
+      template:
+        src: templates/nginx-wazuh.conf.j2
+        dest: /etc/nginx/sites-available/wazuh
+
+    - name: Generate self-signed SSL certificate for Nginx
+      shell: |
+        mkdir -p /etc/nginx/ssl
+        if [ ! -f /etc/nginx/ssl/nginx.crt ]; then
+          openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+          -keyout /etc/nginx/ssl/nginx.key \
+          -out /etc/nginx/ssl/nginx.crt \
+          -subj "/CN=orbit-node"
+        fi
+
+    - name: Enable Nginx site
+      file:
+        src: /etc/nginx/sites-available/wazuh
+        dest: /etc/nginx/sites-enabled/wazuh
+        state: link
+
+    - name: Remove default Nginx site
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+
+    - name: Restart Nginx
+      systemd:
+        name: nginx
+        state: restarted
+        enabled: yes
+
+    - name: Display completion message
+      debug:
+        msg:
+          - "Wazuh installation complete!"
+          - "Dashboard: https://{{ ansible_host }}"
+          - "Username: {{ indexer_username }}"
+          - "Password: {{ indexer_password }}"

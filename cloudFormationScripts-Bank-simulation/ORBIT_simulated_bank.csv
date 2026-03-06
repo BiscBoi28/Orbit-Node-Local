@@ -1,0 +1,4 @@
+Asset_ID,Hostname,AWS_Resource_Type,Operating_System,Instance_Size,Technical_Role,OpenSource_Software_To_Install
+NS-01,corebank-db-01,EC2,Linux (RHEL 8),t3.micro,"Database Server,Application Server","postgresql15,postgresql15-server,java-11-openjdk,tomcat,nodejs,npm"
+NS-02,corebank-web-01,EC2,Linux (Ubuntu 22.04),t3.micro,Web Server,"nginx,php8.1,nodejs,npm"
+NS-03,corp-ad-01,EC2,Windows Server 2022,t3.micro,"Active Directory,Jump Host","putty,winscp,nodejs,npm"

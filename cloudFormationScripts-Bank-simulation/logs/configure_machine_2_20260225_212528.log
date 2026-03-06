@@ -1,0 +1,111 @@
+[2026-02-25 21:25:28] [INFO] Log file: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/logs/configure_machine_2_20260225_212528.log
+[2026-02-25 21:25:28] [INFO] Configure machine 2 (NS-02) started
+[2026-02-25 21:25:29] [INFO] Machine 2 host: corebank-web-01
+[2026-02-25 21:25:29] [INFO] Machine 2: Generate inventory (started)
+[2026-02-25 21:25:40] [INFO] Generated /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/inventory/host_software.yml
+[2026-02-25 21:25:40] [INFO] Generated /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/inventory/hosts.ini
+[2026-02-25 21:25:40] [INFO] Machine 2: Generate inventory (completed)
+[2026-02-25 21:25:40] [INFO] Inventory: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/inventory/hosts.ini
+[2026-02-25 21:25:40] [INFO] Using AWS SSM for Ansible (no SSH key)
+[2026-02-25 21:25:40] [INFO] Using host_software: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/inventory/host_software.yml
+[2026-02-25 21:25:40] [INFO] Machine 2: Install software (started) -- playbook install_software_linux.yaml --limit corebank-web-01
+[WARNING]: Found variable using reserved name: retries
+
+PLAY [Install software on Linux hosts] *****************************************
+
+TASK [Gathering Facts] *********************************************************
+[WARNING]: Platform linux on host corebank-web-01 is using the discovered
+Python interpreter at /usr/bin/python3.10, but future installation of another
+Python interpreter could change the meaning of that path. See
+https://docs.ansible.com/ansible-
+core/2.18/reference_appendices/interpreter_discovery.html for more information.
+ok: [corebank-web-01]
+
+TASK [Set package list (Amazon Linux 2023)] ************************************
+skipping: [corebank-web-01]
+
+TASK [Set package list (other Linux)] ******************************************
+ok: [corebank-web-01]
+
+TASK [Install packages (via package module)] ***********************************
+ok: [corebank-web-01]
+
+TASK [Enable and start known systemd services] *********************************
+skipping: [corebank-web-01]
+
+PLAY RECAP *********************************************************************
+corebank-web-01            : ok=3    changed=0    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0   
+
+[2026-02-25 21:26:00] [INFO] Machine 2: Install software (completed OK)
+[2026-02-25 21:26:00] [INFO] Machine 2: Register Wazuh agent (started) -- playbook register_wazuh_agent.yaml --limit corebank-web-01
+[WARNING]: Found variable using reserved name: retries
+
+PLAY [Register Wazuh agent (Linux)] ********************************************
+
+TASK [Gathering Facts] *********************************************************
+[WARNING]: Platform linux on host corebank-web-01 is using the discovered
+Python interpreter at /usr/bin/python3.10, but future installation of another
+Python interpreter could change the meaning of that path. See
+https://docs.ansible.com/ansible-
+core/2.18/reference_appendices/interpreter_discovery.html for more information.
+ok: [corebank-web-01]
+
+TASK [Download Wazuh agent RPM (RHEL/Amazon Linux)] ****************************
+skipping: [corebank-web-01]
+
+TASK [Install wazuh-agent from RPM with manager and agent name (RHEL/Amazon Linux)] ***
+skipping: [corebank-web-01]
+
+TASK [Remove Wazuh RPM from tmp (RHEL/Amazon Linux)] ***************************
+skipping: [corebank-web-01]
+
+TASK [Add Wazuh repo (Ubuntu)] *************************************************
+[WARNING]: Failed to update cache after 1 due to W:GPG error:
+https://packages.wazuh.com/4.x/apt stable InRelease: The following signatures
+couldn't be verified because the public key is not available: NO_PUBKEY
+96B3EE5F29111145, E:The repository 'https://packages.wazuh.com/4.x/apt stable
+InRelease' is not signed. retry, retrying
+[WARNING]: Sleeping for 2 seconds, before attempting to update the cache again
+[WARNING]: Failed to update cache after 2 due to W:Updating from such a
+repository can't be done securely, and is therefore disabled by default., W:See
+apt-secure(8) manpage for repository creation and user configuration details.,
+W:GPG error: https://packages.wazuh.com/4.x/apt stable InRelease: The following
+signatures couldn't be verified because the public key is not available:
+NO_PUBKEY 96B3EE5F29111145, E:The repository
+'https://packages.wazuh.com/4.x/apt stable InRelease' is not signed. retry,
+retrying
+[WARNING]: Sleeping for 3 seconds, before attempting to update the cache again
+[WARNING]: Failed to update cache after 3 due to W:Updating from such a
+repository can't be done securely, and is therefore disabled by default., W:See
+apt-secure(8) manpage for repository creation and user configuration details.,
+W:GPG error: https://packages.wazuh.com/4.x/apt stable InRelease: The following
+signatures couldn't be verified because the public key is not available:
+NO_PUBKEY 96B3EE5F29111145, E:The repository
+'https://packages.wazuh.com/4.x/apt stable InRelease' is not signed. retry,
+retrying
+[WARNING]: Sleeping for 5 seconds, before attempting to update the cache again
+[WARNING]: Failed to update cache after 4 due to W:Updating from such a
+repository can't be done securely, and is therefore disabled by default., W:See
+apt-secure(8) manpage for repository creation and user configuration details.,
+W:GPG error: https://packages.wazuh.com/4.x/apt stable InRelease: The following
+signatures couldn't be verified because the public key is not available:
+NO_PUBKEY 96B3EE5F29111145, E:The repository
+'https://packages.wazuh.com/4.x/apt stable InRelease' is not signed. retry,
+retrying
+[WARNING]: Sleeping for 9 seconds, before attempting to update the cache again
+[WARNING]: Failed to update cache after 5 due to W:Updating from such a
+repository can't be done securely, and is therefore disabled by default., W:See
+apt-secure(8) manpage for repository creation and user configuration details.,
+W:GPG error: https://packages.wazuh.com/4.x/apt stable InRelease: The following
+signatures couldn't be verified because the public key is not available:
+NO_PUBKEY 96B3EE5F29111145, E:The repository
+'https://packages.wazuh.com/4.x/apt stable InRelease' is not signed. retry,
+retrying
+[WARNING]: Sleeping for 13 seconds, before attempting to update the cache again
+fatal: [corebank-web-01]: FAILED! => {"changed": false, "msg": "Failed to update apt cache after 5 retries: W:Updating from such a repository can't be done securely, and is therefore disabled by default., W:See apt-secure(8) manpage for repository creation and user configuration details., W:GPG error: https://packages.wazuh.com/4.x/apt stable InRelease: The following signatures couldn't be verified because the public key is not available: NO_PUBKEY 96B3EE5F29111145, E:The repository 'https://packages.wazuh.com/4.x/apt stable InRelease' is not signed."}
+
+PLAY RECAP *********************************************************************
+corebank-web-01            : ok=1    changed=0    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0   
+
+[2026-02-25 21:27:01] [WARN] Machine 2: Register Wazuh agent (completed with errors, check Ansible output above)
+[2026-02-25 21:27:01] [INFO] Configure machine 2 finished. Full log: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/logs/configure_machine_2_20260225_212528.log

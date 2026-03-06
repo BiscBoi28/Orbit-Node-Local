@@ -1,0 +1,21 @@
+---
+- name: Install Wazuh agent (Linux)
+  ansible.builtin.package:
+    name: wazuh-agent
+    state: present
+  when: ansible_os_family is defined
+  environment:
+    WAZUH_MANAGER: "{{ wazuh_manager | default('') }}"
+
+- name: Configure Wazuh manager address
+  ansible.builtin.lineinfile:
+    path: /var/ossec/etc/ossec.conf
+    regexp: '^[[:space:]]*<address>.*</address>'
+    line: "  <address>{{ wazuh_manager }}</address>"
+  when: wazuh_manager | length > 0
+
+- name: Start wazuh-agent
+  ansible.builtin.systemd:
+    name: wazuh-agent
+    state: started
+    enabled: yes

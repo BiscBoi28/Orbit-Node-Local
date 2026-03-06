@@ -1,0 +1,40 @@
+---
+- name: Install software on Linux hosts
+  hosts: linux_rhel:linux_ubuntu
+  become: yes
+  vars:
+    retries: 3
+    delay_sec: 10
+    software_packages_csv: "{{ (host_software | default({}))[inventory_hostname] | default('') }}"
+  tasks:
+    - name: Set package list (Amazon Linux 2023)
+      ansible.builtin.set_fact:
+        packages_to_install: "{{ (software_packages_csv.split(',') | map('trim') | select | list) | map('regex_replace', '^java-11-openjdk$', 'java-11-amazon-corretto-headless') | reject('eq', 'tomcat') | reject('eq', '') | list }}"
+      when:
+        - software_packages_csv is defined
+        - software_packages_csv | length > 0
+        - ansible_distribution == 'Amazon'
+
+    - name: Set package list (other Linux)
+      ansible.builtin.set_fact:
+        packages_to_install: "{{ software_packages_csv.split(',') | map('trim') | select | list }}"
+      when:
+        - software_packages_csv is defined
+        - software_packages_csv | length > 0
+        - ansible_distribution != 'Amazon'
+
+    - name: Install packages (via package module)
+      ansible.builtin.package:
+        name: "{{ packages_to_install | default([]) }}"
+        state: present
+      when: (packages_to_install | default([])) | length > 0
+
+    - name: Enable and start known systemd services
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+        daemon_reload: yes
+      loop: "{{ (service_list | default([])) }}"
+      when: service_list is defined
+      ignore_errors: yes

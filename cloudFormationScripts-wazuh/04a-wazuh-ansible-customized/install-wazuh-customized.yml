@@ -1,0 +1,151 @@
+---
+- name: Install Wazuh with EBS Storage and Custom Memory Settings
+  hosts: wazuh_server
+  become: yes
+
+  vars:
+    data_path: /data
+    indexer_heap_size: 2g
+    indexer_memory_limit: 3g
+
+  tasks:
+    - name: Get list of Wazuh containers
+      shell: docker ps -a --filter "name=wazuh" -q
+      register: wazuh_containers
+      ignore_errors: yes
+
+    - name: Stop Wazuh containers
+      shell: docker stop {{ wazuh_containers.stdout_lines | join(' ') }}
+      when: wazuh_containers.stdout_lines | length > 0
+      ignore_errors: yes
+
+    - name: Remove Wazuh containers
+      shell: docker rm {{ wazuh_containers.stdout_lines | join(' ') }}
+      when: wazuh_containers.stdout_lines | length > 0
+      ignore_errors: yes
+
+    - name: Stop nginx if running
+      shell: systemctl stop nginx 2>/dev/null || killall nginx 2>/dev/null || true
+      ignore_errors: yes
+
+    - name: Install git
+      apt:
+        name: git
+        state: present
+        update_cache: yes
+
+    - name: Clone Wazuh Docker repository
+      git:
+        repo: https://github.com/wazuh/wazuh-docker.git
+        dest: /opt/wazuh-docker
+        version: v4.14.2
+        force: yes
+
+    - name: Generate certificates
+      shell: |
+        cd /opt/wazuh-docker/single-node
+        docker compose -f generate-indexer-certs.yml run --rm generator
+      args:
+        creates: /opt/wazuh-docker/single-node/config/wazuh_indexer_ssl_certs/root-ca.pem
+
+    - name: Customize docker-compose.yml for EBS storage
+      shell: |
+        cd /opt/wazuh-docker/single-node
+        cp docker-compose.yml docker-compose.yml.original
+        
+        # Replace named volumes with bind mounts to /data
+        sed -i 's|wazuh-indexer-data:/var/lib/wazuh-indexer|{{ data_path }}/wazuh-indexer:/var/lib/wazuh-indexer|g' docker-compose.yml
+        sed -i 's|wazuh_api_configuration:/var/ossec/api/configuration|{{ data_path }}/wazuh/api-configuration:/var/ossec/api/configuration|g' docker-compose.yml
+        sed -i 's|wazuh_etc:/var/ossec/etc|{{ data_path }}/wazuh/etc:/var/ossec/etc|g' docker-compose.yml
+        sed -i 's|wazuh_logs:/var/ossec/logs|{{ data_path }}/wazuh/logs:/var/ossec/logs|g' docker-compose.yml
+        sed -i 's|wazuh_queue:/var/ossec/queue|{{ data_path }}/wazuh/queue:/var/ossec/queue|g' docker-compose.yml
+        sed -i 's|wazuh_var_multigroups:/var/ossec/var/multigroups|{{ data_path }}/wazuh/var-multigroups:/var/ossec/var/multigroups|g' docker-compose.yml
+        sed -i 's|wazuh_integrations:/var/ossec/integrations|{{ data_path }}/wazuh/integrations:/var/ossec/integrations|g' docker-compose.yml
+        sed -i 's|wazuh_active_response:/var/ossec/active-response|{{ data_path }}/wazuh/active-response:/var/ossec/active-response|g' docker-compose.yml
+        sed -i 's|wazuh_agentless:/var/ossec/agentless|{{ data_path }}/wazuh/agentless:/var/ossec/agentless|g' docker-compose.yml
+        sed -i 's|wazuh_wodles:/var/ossec/wodles|{{ data_path }}/wazuh/wodles:/var/ossec/wodles|g' docker-compose.yml
+        sed -i 's|filebeat_etc:/etc/filebeat|{{ data_path }}/wazuh/filebeat-etc:/etc/filebeat|g' docker-compose.yml
+        sed -i 's|filebeat_var:/var/lib/filebeat|{{ data_path }}/wazuh/filebeat-var:/var/lib/filebeat|g' docker-compose.yml
+        sed -i 's|wazuh-dashboard-config:/usr/share/wazuh-dashboard/data/wazuh/config|{{ data_path }}/wazuh/dashboard-config:/usr/share/wazuh-dashboard/data/wazuh/config|g' docker-compose.yml
+        sed -i 's|wazuh-dashboard-custom:/usr/share/wazuh-dashboard/plugins/wazuh/public/assets/custom|{{ data_path }}/wazuh/dashboard-custom:/usr/share/wazuh-dashboard/plugins/wazuh/public/assets/custom|g' docker-compose.yml
+
+    - name: Create required directories on EBS volume
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: 1000
+        group: 1000
+        mode: '0755'
+      loop:
+        - "{{ data_path }}/wazuh/api-configuration"
+        - "{{ data_path }}/wazuh/etc"
+        - "{{ data_path }}/wazuh/logs"
+        - "{{ data_path }}/wazuh/queue"
+        - "{{ data_path }}/wazuh/var-multigroups"
+        - "{{ data_path }}/wazuh/integrations"
+        - "{{ data_path }}/wazuh/active-response"
+        - "{{ data_path }}/wazuh/agentless"
+        - "{{ data_path }}/wazuh/wodles"
+        - "{{ data_path }}/wazuh/filebeat-etc"
+        - "{{ data_path }}/wazuh/filebeat-var"
+        - "{{ data_path }}/wazuh/dashboard-config"
+        - "{{ data_path }}/wazuh/dashboard-custom"
+
+    - name: Update indexer memory settings
+      lineinfile:
+        path: /opt/wazuh-docker/single-node/docker-compose.yml
+        regexp: '^(\s+)OPENSEARCH_JAVA_OPTS:'
+        line: '\1OPENSEARCH_JAVA_OPTS: "-Xms{{ indexer_heap_size }} -Xmx{{ indexer_heap_size }}"'
+        backrefs: yes
+
+    - name: Add memory limit to indexer service
+      lineinfile:
+        path: /opt/wazuh-docker/single-node/docker-compose.yml
+        insertafter: '^\s+wazuh\.indexer:'
+        line: '    mem_limit: {{ indexer_memory_limit }}'
+        firstmatch: yes
+
+    - name: Remove volumes section from docker-compose
+      shell: sed -i '/^volumes:/,$ d' docker-compose.yml
+      args:
+        chdir: /opt/wazuh-docker/single-node
+
+    - name: Start Wazuh stack
+      community.docker.docker_compose_v2:
+        project_src: /opt/wazuh-docker/single-node
+        state: present
+
+    - name: Wait for indexer to be ready
+      uri:
+        url: https://127.0.0.1:9200
+        user: admin
+        password: SecretPassword
+        validate_certs: no
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 30
+      delay: 10
+
+    - name: Wait for dashboard to be ready
+      uri:
+        url: https://127.0.0.1:443
+        validate_certs: no
+        status_code: [200, 302]
+      register: result
+      until: result.status in [200, 302]
+      retries: 30
+      delay: 10
+
+    - name: Display completion message
+      debug:
+        msg:
+          - "Wazuh installation complete with customizations!"
+          - "Dashboard: https://{{ ansible_host }}"
+          - "Username: admin"
+          - "Password: SecretPassword"
+          - ""
+          - "Customizations applied:"
+          - "- Data stored on EBS volume: {{ data_path }}"
+          - "- Indexer heap size: {{ indexer_heap_size }}"
+          - "- Indexer memory limit: {{ indexer_memory_limit }}"

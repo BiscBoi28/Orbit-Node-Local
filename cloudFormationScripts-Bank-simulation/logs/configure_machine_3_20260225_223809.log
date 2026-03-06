@@ -1,0 +1,39 @@
+[2026-02-25 22:38:09] [INFO] Log file: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/logs/configure_machine_3_20260225_223809.log
+[2026-02-25 22:38:09] [INFO] Configure machine 3 (NS-03) started
+[2026-02-25 22:38:10] [INFO] Machine 3 host: corp-ad-01
+[2026-02-25 22:38:10] [INFO] Machine 3: Generate inventory (started)
+[2026-02-25 22:38:24] [INFO] Generated /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/inventory/host_software.yml
+[2026-02-25 22:38:24] [INFO] Generated /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/inventory/hosts.ini
+[2026-02-25 22:38:24] [INFO] Machine 3: Generate inventory (completed)
+[2026-02-25 22:38:24] [INFO] Inventory: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/inventory/hosts.ini
+[2026-02-25 22:38:24] [INFO] Using AWS SSM for Ansible (no SSH key)
+[2026-02-25 22:38:24] [INFO] Using host_software: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/inventory/host_software.yml
+[2026-02-25 22:38:24] [INFO] Machine 3: Install software (started) -- playbook install_software_windows.yaml --limit corp-ad-01
+ERROR! couldn't resolve module/action 'community.windows.chocolatey'. This often indicates a misspelling, missing collection, or incorrect module path.
+
+The error appears to be in '/Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/playbooks/install_software_windows.yaml': line 9, column 7, but may
+be elsewhere in the file depending on the exact syntax problem.
+
+The offending line appears to be:
+
+  tasks:
+    - name: Install Chocolatey packages
+      ^ here
+[2026-02-25 22:38:25] [WARN] Machine 3: Install software (completed with errors, check Ansible output above)
+[2026-02-25 22:38:25] [INFO] Machine 3: Register Wazuh agent (started) -- playbook register_wazuh_agent.yaml --limit corp-ad-01
+[WARNING]: Found variable using reserved name: retries
+
+PLAY [Register Wazuh agent (Linux)] ********************************************
+skipping: no hosts matched
+
+PLAY [Register Wazuh agent (Windows)] ******************************************
+
+TASK [Gathering Facts] *********************************************************
+An exception occurred during task execution. To see the full traceback, use -vvv. The error was: botocore.errorfactory.TargetNotConnected: An error occurred (TargetNotConnected) when calling the StartSession operation: i-083e996cc6fb1f848 is not connected.
+fatal: [corp-ad-01]: FAILED! => {"msg": "Unexpected failure during module execution: An error occurred (TargetNotConnected) when calling the StartSession operation: i-083e996cc6fb1f848 is not connected.", "stdout": ""}
+
+PLAY RECAP *********************************************************************
+corp-ad-01                 : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+
+[2026-02-25 22:38:32] [WARN] Machine 3: Register Wazuh agent (completed with errors, check Ansible output above)
+[2026-02-25 22:38:32] [INFO] Configure machine 3 finished. Full log: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/logs/configure_machine_3_20260225_223809.log

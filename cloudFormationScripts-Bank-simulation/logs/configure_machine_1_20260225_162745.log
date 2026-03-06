@@ -1,0 +1,51 @@
+[2026-02-25 16:27:45] [INFO] Log file: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/logs/configure_machine_1_20260225_162745.log
+[2026-02-25 16:27:45] [INFO] Configure machine 1 (NS-01) started
+[2026-02-25 16:27:47] [INFO] Machine 1 host: corebank-db-01
+[2026-02-25 16:27:47] [INFO] Machine 1: Generate inventory (started)
+[2026-02-25 16:27:54] [INFO] Generated /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/inventory/host_software.yml
+[2026-02-25 16:27:54] [INFO] Generated /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/inventory/hosts.ini
+[2026-02-25 16:27:54] [INFO] Machine 1: Generate inventory (completed)
+[2026-02-25 16:27:54] [INFO] Inventory: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/inventory/hosts.ini
+[2026-02-25 16:27:54] [INFO] Using AWS SSM for Ansible (no SSH key)
+[2026-02-25 16:27:54] [INFO] Using host_software: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/inventory/host_software.yml
+[2026-02-25 16:27:54] [INFO] Machine 1: Install software (started) -- playbook install_software_linux.yaml --limit corebank-db-01
+[WARNING]: Found variable using reserved name: retries
+
+PLAY [Install software on Linux hosts] *****************************************
+
+TASK [Gathering Facts] *********************************************************
+[WARNING]: Platform linux on host corebank-db-01 is using the discovered Python
+interpreter at /usr/bin/python3.9, but future installation of another Python
+interpreter could change the meaning of that path. See
+https://docs.ansible.com/ansible-
+core/2.18/reference_appendices/interpreter_discovery.html for more information.
+ok: [corebank-db-01]
+
+TASK [Install packages (via package module)] ***********************************
+fatal: [corebank-db-01]: FAILED! => {"changed": false, "failures": ["No package java-11-openjdk available.", "No package tomcat available."], "msg": "Failed to install some of the specified packages", "rc": 1, "results": []}
+
+PLAY RECAP *********************************************************************
+corebank-db-01             : ok=1    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+
+[2026-02-25 16:28:14] [WARN] Machine 1: Install software (completed with errors, check Ansible output above)
+[2026-02-25 16:28:14] [INFO] Machine 1: Register Wazuh agent (started) -- playbook register_wazuh_agent.yaml --limit corebank-db-01
+[WARNING]: Found variable using reserved name: retries
+
+PLAY [Register Wazuh agent (Linux)] ********************************************
+
+TASK [Gathering Facts] *********************************************************
+[WARNING]: Platform linux on host corebank-db-01 is using the discovered Python
+interpreter at /usr/bin/python3.9, but future installation of another Python
+interpreter could change the meaning of that path. See
+https://docs.ansible.com/ansible-
+core/2.18/reference_appendices/interpreter_discovery.html for more information.
+ok: [corebank-db-01]
+
+TASK [Add Wazuh repo (RHEL)] ***************************************************
+fatal: [corebank-db-01]: FAILED! => {"changed": false, "msg": "Failed to validate GPG signature for wazuh-agent-4.7.2-1.x86_64: Public key for wazuh-agent-4.7.2-1.x86_64ad7v7br1.rpm is not installed"}
+
+PLAY RECAP *********************************************************************
+corebank-db-01             : ok=1    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+
+[2026-02-25 16:28:34] [WARN] Machine 1: Register Wazuh agent (completed with errors, check Ansible output above)
+[2026-02-25 16:28:34] [INFO] Configure machine 1 finished. Full log: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/logs/configure_machine_1_20260225_162745.log

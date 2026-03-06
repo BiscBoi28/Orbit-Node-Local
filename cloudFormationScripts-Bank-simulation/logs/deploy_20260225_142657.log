@@ -1,0 +1,31 @@
+[2026-02-25 14:26:57] [INFO] Log file: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/logs/deploy_20260225_142657.log
+[2026-02-25 14:26:59] [INFO] Step 01: Pre-requirements (started)
+[2026-02-25 14:26:59] [INFO] Creating stack njsecure-prod-pre-requirements
+
+Waiting for changeset to be created..
+
+No changes to deploy. Stack njsecure-prod-pre-requirements is up to date
+[2026-02-25 14:27:03] [INFO] Stack njsecure-prod-pre-requirements CREATE_COMPLETE
+[2026-02-25 14:27:05] [INFO] Step 01: Pre-requirements (completed)
+[2026-02-25 14:27:05] [INFO] Step 02: Secrets (started)
+[2026-02-25 14:27:05] [INFO] Creating stack njsecure-prod-secrets
+
+Waiting for changeset to be created..
+
+No changes to deploy. Stack njsecure-prod-secrets is up to date
+[2026-02-25 14:27:09] [INFO] Stack njsecure-prod-secrets CREATE_COMPLETE
+[2026-02-25 14:27:10] [INFO] Step 02: Secrets (completed)
+[2026-02-25 14:27:10] [INFO] Step 03: EC2 (started)
+[2026-02-25 14:27:18] [INFO] Deploying njsecure-prod-ec2-ns-01 (linux)
+[2026-02-25 14:27:19] [INFO] Deploying njsecure-prod-ec2-ns-02 (linux)
+
+An error occurred (ValidationError) when calling the CreateChangeSet operation: Stack:arn:aws:cloudformation:us-east-1:684418150056:stack/njsecure-prod-ec2-ns-01/ee402d00-1221-11f1-8090-0affefcd7dd3 is in ROLLBACK_COMPLETE state and can not be updated.
+
+An error occurred (ValidationError) when calling the CreateChangeSet operation: Stack:arn:aws:cloudformation:us-east-1:684418150056:stack/njsecure-prod-ec2-ns-02/f0c30750-1221-11f1-afea-12fffc5a8239 is in ROLLBACK_COMPLETE state and can not be updated.
+[2026-02-25 14:27:24] [INFO] Deploying njsecure-prod-ec2-ns-03 (windows)
+
+An error occurred (ValidationError) when calling the CreateChangeSet operation: Stack:arn:aws:cloudformation:us-east-1:684418150056:stack/njsecure-prod-ec2-ns-03/f4b1a6a0-1221-11f1-9a9b-0e036ff49665 is in ROLLBACK_COMPLETE state and can not be updated.
+[2026-02-25 14:27:37] [INFO] EC2 create finished
+[2026-02-25 14:27:39] [INFO] Step 03: EC2 (completed)
+[2026-02-25 14:27:39] [INFO] Step 04: Generate inventory (started)
+[2026-02-25 14:27:39] [ERROR] CSV not found: ../ORBIT_simulated_bank.csv

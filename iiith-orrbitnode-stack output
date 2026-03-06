@@ -1,0 +1,19 @@
+==========================================
+Stack Outputs
+==========================================
+---------------------------------------------------------------------------------------------------------------------
+|                                                  DescribeStacks                                                   |
++-----------------------+-------------------------------------------------------------------------------------------+
+|  ElasticIP            |  18.116.159.176                                                                           |
+|  VpcId                |  vpc-0bd3bc596c3f08051                                                                    |
+|  DataMountPath        |  /data                                                                                    |
+|  SecurityGroupId      |  sg-0bd73e9a50509dce4                                                                     |
+|  EbsDeviceName        |  /dev/sdf                                                                                 |
+|  SubnetId             |  subnet-0da8a278b6609bba3                                                                 |
+|  DataVolumeId         |  vol-0cfe6890513b2a8da                                                                    |
+|  ElasticIPAllocationId|  eipalloc-0feaf3811014ccb3e                                                               |
+|  InstanceProfileArn   |  arn:aws:iam::684418150056:instance-profile/iiith-orbit-node-pre-deployment-dev-profile   |
++-----------------------+-------------------------------------------------------------------------------------------+
+
+Elastic IP has been created and will persist across EC2 stack deletions.
+Save this IP for agent configuration.

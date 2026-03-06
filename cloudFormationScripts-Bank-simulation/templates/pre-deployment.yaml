@@ -1,0 +1,415 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Pre-deployment infrastructure for ORBIT Bank simulation - VPC, networking, security groups, and IAM resources'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: 'njsecure-prod'
+    Description: 'Project identifier for resource naming'
+  
+  Environment:
+    Type: String
+    Default: 'prod'
+    Description: 'Environment tag for resources'
+  
+  AdminIpCidr:
+    Type: String
+    Default: '0.0.0.0/0'
+    Description: 'CIDR block for administrative access to jump hosts'
+    AllowedPattern: '^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$'
+  
+  WazuhServerIp:
+    Type: String
+    Description: 'IP address of the Wazuh server for agent communication'
+    AllowedPattern: '^(\d{1,3}\.){3}\d{1,3}$'
+
+Resources:
+  # VPC
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-VPC'
+        - Key: project
+          Value: ORBIT
+        - Key: environment
+          Value: !Ref Environment
+        - Key: component
+          Value: bank-infrastructure
+
+  # Internet Gateway
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-IGW'
+        - Key: project
+          Value: ORBIT
+        - Key: environment
+          Value: !Ref Environment
+        - Key: component
+          Value: bank-infrastructure
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # Public Subnet
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-PublicSubnet'
+        - Key: project
+          Value: ORBIT
+        - Key: environment
+          Value: !Ref Environment
+        - Key: component
+          Value: bank-infrastructure
+
+  # Route Table
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-PublicRouteTable'
+        - Key: project
+          Value: ORBIT
+        - Key: environment
+          Value: !Ref Environment
+        - Key: component
+          Value: bank-infrastructure
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  SubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  # Security Groups
+  
+  # Database Security Group - Port 5432 from application servers
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${ProjectName}-Database-SG'
+      GroupDescription: 'Security group for database servers - allows PostgreSQL access from application servers'
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref ApplicationSecurityGroup
+          Description: 'PostgreSQL from application servers'
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: 'Allow all outbound traffic'
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-Database-SG'
+        - Key: project
+          Value: ORBIT
+        - Key: environment
+          Value: !Ref Environment
+        - Key: component
+          Value: bank-infrastructure
+
+  # Application Security Group - Port 8080 from web servers
+  ApplicationSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${ProjectName}-Application-SG'
+      GroupDescription: 'Security group for application servers - allows HTTP access from web servers'
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          SourceSecurityGroupId: !Ref WebSecurityGroup
+          Description: 'HTTP from web servers'
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: 'Allow all outbound traffic'
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-Application-SG'
+        - Key: project
+          Value: ORBIT
+        - Key: environment
+          Value: !Ref Environment
+        - Key: component
+          Value: bank-infrastructure
+
+  # Web Security Group - Ports 80 and 443 from internet
+  WebSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${ProjectName}-Web-SG'
+      GroupDescription: 'Security group for web servers - allows HTTP and HTTPS from internet'
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: 'HTTP from internet'
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: 'HTTPS from internet'
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: 'Allow all outbound traffic'
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-Web-SG'
+        - Key: project
+          Value: ORBIT
+        - Key: environment
+          Value: !Ref Environment
+        - Key: component
+          Value: bank-infrastructure
+
+  # Active Directory Security Group - Ports 389, 636, 88, 445, 3389
+  ActiveDirectorySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${ProjectName}-ActiveDirectory-SG'
+      GroupDescription: 'Security group for Active Directory servers - allows LDAP, Kerberos, SMB, and RDP'
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 389
+          ToPort: 389
+          CidrIp: 10.0.0.0/16
+          Description: 'LDAP from VPC'
+        - IpProtocol: tcp
+          FromPort: 636
+          ToPort: 636
+          CidrIp: 10.0.0.0/16
+          Description: 'LDAPS from VPC'
+        - IpProtocol: tcp
+          FromPort: 88
+          ToPort: 88
+          CidrIp: 10.0.0.0/16
+          Description: 'Kerberos from VPC'
+        - IpProtocol: tcp
+          FromPort: 445
+          ToPort: 445
+          CidrIp: 10.0.0.0/16
+          Description: 'SMB from VPC'
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 10.0.0.0/16
+          Description: 'RDP from VPC'
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: 'Allow all outbound traffic'
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-ActiveDirectory-SG'
+        - Key: project
+          Value: ORBIT
+        - Key: environment
+          Value: !Ref Environment
+        - Key: component
+          Value: bank-infrastructure
+
+  # Jump Host Security Group - Ports 22 and 3389 from admin IPs
+  JumpHostSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${ProjectName}-JumpHost-SG'
+      GroupDescription: 'Security group for jump hosts - allows SSH and RDP from admin IPs'
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref AdminIpCidr
+          Description: 'SSH from admin IPs'
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: !Ref AdminIpCidr
+          Description: 'RDP from admin IPs'
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: 'Allow all outbound traffic'
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-JumpHost-SG'
+        - Key: project
+          Value: ORBIT
+        - Key: environment
+          Value: !Ref Environment
+        - Key: component
+          Value: bank-infrastructure
+
+  # Wazuh Agent Security Group - Ports 1514 and 1515 outbound to Wazuh server
+  WazuhAgentSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${ProjectName}-WazuhAgent-SG'
+      GroupDescription: 'Security group for Wazuh agents - allows outbound communication to Wazuh server'
+      VpcId: !Ref VPC
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 1514
+          ToPort: 1514
+          CidrIp: !Sub '${WazuhServerIp}/32'
+          Description: 'Wazuh agent registration to Wazuh server'
+        - IpProtocol: tcp
+          FromPort: 1515
+          ToPort: 1515
+          CidrIp: !Sub '${WazuhServerIp}/32'
+          Description: 'Wazuh agent communication to Wazuh server'
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: 'Allow all other outbound traffic'
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-WazuhAgent-SG'
+        - Key: project
+          Value: ORBIT
+        - Key: environment
+          Value: !Ref Environment
+        - Key: component
+          Value: bank-infrastructure
+
+  # IAM Role and Instance Profile
+  
+  EC2InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-EC2-Role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore'
+      Policies:
+        - PolicyName: SecretsManagerReadAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'secretsmanager:GetSecretValue'
+                  - 'secretsmanager:DescribeSecret'
+                Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:njsecure-prod/*'
+        - PolicyName: CloudWatchLogsWriteAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                  - 'logs:DescribeLogStreams'
+                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/ec2/njsecure-prod/*'
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-EC2-Role'
+        - Key: project
+          Value: ORBIT
+        - Key: environment
+          Value: !Ref Environment
+        - Key: component
+          Value: bank-infrastructure
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub '${ProjectName}-EC2-InstanceProfile'
+      Roles:
+        - !Ref EC2InstanceRole
+
+Outputs:
+  VpcId:
+    Description: 'VPC ID for bank infrastructure'
+    Value: !Ref VPC
+    Export:
+      Name: !Sub '${AWS::StackName}-VpcId'
+
+  SubnetId:
+    Description: 'Public subnet ID for bank infrastructure'
+    Value: !Ref PublicSubnet
+    Export:
+      Name: !Sub '${AWS::StackName}-SubnetId'
+
+  DatabaseSecurityGroupId:
+    Description: 'Security group ID for database servers'
+    Value: !Ref DatabaseSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-DatabaseSecurityGroupId'
+
+  ApplicationSecurityGroupId:
+    Description: 'Security group ID for application servers'
+    Value: !Ref ApplicationSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-ApplicationSecurityGroupId'
+
+  WebSecurityGroupId:
+    Description: 'Security group ID for web servers'
+    Value: !Ref WebSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-WebSecurityGroupId'
+
+  ActiveDirectorySecurityGroupId:
+    Description: 'Security group ID for Active Directory servers'
+    Value: !Ref ActiveDirectorySecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-ActiveDirectorySecurityGroupId'
+
+  JumpHostSecurityGroupId:
+    Description: 'Security group ID for jump hosts'
+    Value: !Ref JumpHostSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-JumpHostSecurityGroupId'
+
+  WazuhAgentSecurityGroupId:
+    Description: 'Security group ID for Wazuh agents'
+    Value: !Ref WazuhAgentSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-WazuhAgentSecurityGroupId'
+
+  InstanceProfileArn:
+    Description: 'IAM instance profile ARN for EC2 instances'
+    Value: !GetAtt EC2InstanceProfile.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-InstanceProfileArn'

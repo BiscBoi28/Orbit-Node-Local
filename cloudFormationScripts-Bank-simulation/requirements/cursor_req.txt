@@ -1,0 +1,340 @@
+# Cursor Prompt: ORBIT Simulated Bank Infrastructure on AWS
+
+## Context & Goal
+
+Build a fully **config-driven**, AWS CloudFormation + Ansible automated deployment system for a simulated bank environment (ORBIT project). The system deploys 3 EC2 instances (defined in `ORBIT_simulated_bank.csv`) with security monitoring via Wazuh agents.
+
+The **single source of truth** is `ORBIT_simulated_bank.csv`. All scripts, templates, and playbooks must read from this file — nothing is hardcoded.
+
+
+/Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/05-agent-registration hs the wazuh agent registration script which can be used.
+---
+
+## Asset Inventory (from ORBIT_simulated_bank.csv)
+
+| Asset_ID | Hostname | OS | Size | Role | Software |
+|---|---|---|---|---|---|
+| NS-01 | corebank-db-01 | Linux (RHEL 8) | t3.micro | Database Server, Application Server | postgresql15, postgresql15-server, java-11-openjdk, tomcat, nodejs, npm |
+| NS-02 | corebank-web-01 | Linux (Ubuntu 22.04) | t3.micro | Web Server | nginx, php8.1, nodejs, npm |
+| NS-03 | corp-ad-01 | Windows Server 2022 | t3.micro | Active Directory, Jump Host | putty, winscp, nodejs, npm |
+
+---
+
+## Folder Structure
+
+Create exactly this folder layout:
+
+```
+cloudFormationScripts-Bank-simulation/
+├── ORBIT_simulated_bank.csv              ← Single source of truth
+├── config/
+│   └── deployment.env                   ← All runtime config (Wazuh IP, AWS region, keypair, admin CIDR, etc.)
+│
+├── 01-pre-requirements/
+│   ├── pre-requirements.yaml            ← CloudFormation: VPC, Subnet, Security Groups, IAM
+│   └── deploy.sh                        ← create | delete | status
+│
+├── 02-secrets/
+│   ├── secrets.yaml                     ← CloudFormation: AWS Secrets Manager entries
+│   └── deploy.sh                        ← create | delete | status
+│
+├── 03-ec2/
+│   ├── templates/
+│   │   ├── linux.yaml                   ← Reusable parameterized Linux CF template (RHEL + Ubuntu)
+│   │   └── windows.yaml                 ← Reusable parameterized Windows CF template
+│   └── deploy.sh                        ← create | delete | start | stop | restart | status (reads CSV)
+│
+├── 04-configuration/
+│   ├── inventory/
+│   │   └── generate_inventory.sh        ← Auto-generates Ansible inventory from CF stack outputs
+│   ├── playbooks/
+│   │   ├── install_software_linux.yaml  ← Installs software from CSV on Linux hosts
+│   │   ├── install_software_windows.yaml← Installs software from CSV on Windows hosts
+│   │   └── register_wazuh_agent.yaml    ← Wazuh agent install + register (Linux + Windows)
+│   ├── roles/
+│   │   ├── software_linux/
+│   │   ├── software_windows/
+│   │   └── wazuh_agent/
+│   └── run.sh                           ← install-software | register-wazuh | all | status
+│
+└── 05-orchestrator/
+    ├── deploy_all.sh                    ← Runs steps 01→04 in sequence
+    └── destroy_all.sh                   ← Tears down 04→01 in reverse
+```
+
+---
+
+## Global Rules (apply to ALL files)
+
+1. **Config-driven**: Every script sources `config/deployment.env` at startup. No hardcoded IPs, regions, keys, or names anywhere.
+2. **CSV-driven**: `ORBIT_simulated_bank.csv` is parsed at runtime. Adding a new row to the CSV is all that's needed to deploy a new asset.
+3. **Every deploy script** must support these commands: `create | delete | start | stop | restart | status`
+4. **Tagging**: All AWS resources must have tags: `Project=ORBIT`, `Environment=simulation`, `Component=bank-infrastructure`, plus per-asset `Asset_ID`, `Hostname`, `Technical_Role`.
+5. **Error handling**: All scripts must log with timestamps and severity (`INFO`, `WARN`, `ERROR`). On failure, log the error and exit with non-zero status.
+6. **Idempotent**: Re-running any script should not fail if the resource already exists — it should detect and skip or update.
+
+---
+
+## config/deployment.env
+
+```bash
+# AWS
+AWS_REGION=us-east-1
+AWS_PROFILE=default
+KEY_PAIR_NAME=orbit-bank-keypair
+ADMIN_CIDR=0.0.0.0/0          # Restrict this to your IP in production
+
+# Stack names
+PRE_REQ_STACK=orbit-bank-pre-requirements
+SECRETS_STACK=orbit-bank-secrets
+EC2_STACK_PREFIX=orbit-bank-ec2  # Final name: orbit-bank-ec2-ns-01, etc.
+
+# Wazuh
+WAZUH_SERVER_IP=          # Required — fill before deploying
+WAZUH_SERVER_PORT=1514
+WAZUH_AGENT_GROUP=bank-simulation
+
+# Project
+PROJECT=ORBIT
+ENVIRONMENT=simulation
+CSV_FILE=../ORBIT_simulated_bank.csv
+```
+
+---
+
+## Step 01 — Pre-Requirements CloudFormation (`01-pre-requirements/`)
+
+### `pre-requirements.yaml` must create:
+
+**Networking:**
+- 1 VPC (`10.0.0.0/16`)
+- 1 Public Subnet (`10.0.1.0/24`)
+- Internet Gateway + Route Table
+
+**Security Groups** (one per role, derived from CSV `Technical_Role` column):
+- `sg-database`: Inbound TCP 5432 from `sg-appserver`; inbound TCP 1521 from `sg-appserver`
+- `sg-appserver`: Inbound TCP 8080, 8443 from `sg-webserver`
+- `sg-webserver`: Inbound TCP 80, 443 from `0.0.0.0/0`
+- `sg-activedirectory`: Inbound TCP 389, 636, 88, 445, 3389 from VPC CIDR
+- `sg-jumphost`: Inbound TCP 22, 3389 from `AdminCIDR` parameter
+- All SGs: Outbound TCP 1514, 1515 to Wazuh server (for agent reporting); all other outbound open
+
+**IAM:**
+- IAM Role + Instance Profile (`orbit-bank-ec2-role`) with policies:
+  - `SecretsManagerReadWrite` (scoped to `orbit-bank/*`)
+  - `SSMReadOnlyAccess` (for AMI lookups)
+  - `CloudWatchAgentServerPolicy`
+
+**Outputs** (exported for use by Step 03):
+- `VpcId`, `PublicSubnetId`, `EC2InstanceProfileArn`
+- `SG-Database`, `SG-AppServer`, `SG-WebServer`, `SG-ActiveDirectory`, `SG-JumpHost`
+
+### `deploy.sh` usage:
+```bash
+./deploy.sh create    # Deploy the stack
+./deploy.sh delete    # Delete the stack
+./deploy.sh status    # Show stack status and outputs
+```
+
+---
+
+## Step 02 — Secrets (`02-secrets/`)
+
+### `secrets.yaml` must create these AWS Secrets Manager secrets:
+
+| Secret Path | Content |
+|---|---|
+| `orbit-bank/wazuh` | `{ "server_ip": "", "port": "1514", "agent_group": "bank-simulation" }` |
+| `orbit-bank/db/postgresql` | `{ "username": "orbitadmin", "password": "<generated>" }` |
+| `orbit-bank/ec2/keypair` | `{ "key_pair_name": "" }` |
+| `orbit-bank/windows/admin` | `{ "username": "Administrator", "password": "<generated>" }` |
+
+- Passwords must be auto-generated using AWS Secrets Manager's `GenerateSecretString`
+- Secret ARNs must be exported as CloudFormation outputs
+
+### `deploy.sh` usage:
+```bash
+./deploy.sh create
+./deploy.sh delete
+./deploy.sh status    # List secrets and their ARNs (not values)
+```
+
+---
+
+## Step 03 — EC2 Deployment (`03-ec2/`)
+
+### Templates
+
+#### `templates/linux.yaml` — Parameterized, handles both RHEL 8 and Ubuntu 22.04:
+
+**Parameters:**
+- `AssetID`, `Hostname`, `TechnicalRole`, `OperatingSystem` (AllowedValues: `RHEL8`, `Ubuntu2204`)
+- `InstanceType`, `SoftwarePackages` (comma-separated string)
+- `VpcId`, `SubnetId`, `SecurityGroupIds` (comma-separated), `InstanceProfileArn`
+- `KeyPairName`, `WazuhServerIP`, `WazuhPort`
+
+**AMI selection:** Use `AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>` mappings:
+- RHEL8 → `/aws/service/ami-amazon-linux-latest/...` (use correct RHEL8 SSM path)
+- Ubuntu2204 → `/aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id`
+
+**UserData (via cfn-init or cloud-init):**
+- Set hostname
+- Install packages (from `SoftwarePackages` parameter, handle both `yum` for RHEL and `apt` for Ubuntu)
+- For `postgresql15`/`postgresql15-server`: initialize DB, configure to start on boot
+- For `tomcat`: deploy as systemd service
+- For `nginx`, `nodejs`, `npm`: configure as systemd services
+- All services must use `systemd` with `Restart=on-failure` and `RestartSec=10s`
+
+#### `templates/windows.yaml` — Parameterized for Windows Server 2022:
+
+**Parameters:** Same as linux.yaml plus `AdminPassword` (from Secrets Manager)
+
+**AMI selection:** SSM path for latest Windows Server 2022
+
+**UserData (PowerShell via cfn-init):**
+- Set hostname (requires reboot — handle via `cfn-init` reboot signal)
+- Install Chocolatey, then install packages: `putty`, `winscp`, `nodejs`, `npm`
+- Configure installed services to start automatically (`Set-Service -StartupType Automatic`)
+- Join Active Directory if `TechnicalRole` includes `Active Directory` (use AD DS role installation)
+
+### `deploy.sh` — reads CSV, maps Technical_Role → correct Security Group, deploys correct template:
+
+```bash
+./deploy.sh create             # Deploy all assets from CSV
+./deploy.sh create ns-01       # Deploy single asset by Asset_ID
+./deploy.sh delete             # Delete all EC2 stacks
+./deploy.sh delete ns-01       # Delete single asset
+./deploy.sh start              # Start all EC2 instances
+./deploy.sh stop               # Stop all EC2 instances
+./deploy.sh restart            # Stop then start all
+./deploy.sh status             # Show all instance states + IPs
+```
+
+**CSV parsing logic in deploy.sh:**
+```bash
+# For each row in CSV (skip header):
+#   - Map OS column → linux.yaml or windows.yaml
+#   - Map Technical_Role → comma-separated SG IDs from Step 01 outputs
+#   - Stack name = ${EC2_STACK_PREFIX}-${asset_id_lowercase}
+#   - Pass all parameters to aws cloudformation deploy
+```
+
+---
+
+## Step 04 — Configuration Management (`04-configuration/`)
+
+### `inventory/generate_inventory.sh`
+
+- Queries CF stack outputs for all EC2 stacks (prefix: `orbit-bank-ec2-*`)
+- Generates `inventory/hosts.ini` with groups: `[linux_rhel]`, `[linux_ubuntu]`, `[windows]`
+- Populates `ansible_host` with public IP, `ansible_user`, `ansible_connection=winrm` for Windows
+
+### Ansible Playbooks
+
+#### `playbooks/install_software_linux.yaml`
+
+- Reads software list per host from vars (populated from CSV via `generate_inventory.sh`)
+- Uses `ansible.builtin.package` (handles both `yum`/`apt` via `ansible_pkg_mgr`)
+- After install, enables each service as systemd unit with:
+  ```yaml
+  - name: Enable and start service
+    systemd:
+      name: "{{ item }}"
+      state: started
+      enabled: yes
+  ```
+- **Retry logic**: Use a custom task that checks service status and retries up to 3 times with 10s delay if service is not running after boot
+
+#### `playbooks/install_software_windows.yaml`
+
+- Uses `chocolatey` Ansible collection
+- After install, sets each service to `Automatic` startup with `win_service`
+- Retry logic: loop with `retries: 3`, `delay: 10`, `until: result is success`
+
+#### `playbooks/register_wazuh_agent.yaml`
+
+- Reads `WAZUH_SERVER_IP` and `WAZUH_SERVER_PORT` from `config/deployment.env` (passed as extra vars)
+- **Auto-generates Asset ID** from hostname using pattern: take last segment of hostname + timestamp hash → register as agent name
+- Linux tasks:
+  1. Add Wazuh repo (RHEL: rpm, Ubuntu: apt)
+  2. Install `wazuh-agent`
+  3. Configure `/var/ossec/etc/ossec.conf` with Wazuh server IP
+  4. `systemctl enable --now wazuh-agent`
+  5. Verify agent status with retry (3 attempts, 10s delay)
+- Windows tasks:
+  1. Download Wazuh MSI from official URL
+  2. Install silently with `WAZUH_MANAGER` env var
+  3. Start `WazuhSvc` service, set to Automatic
+  4. Verify with retry
+- Register agent name as: `{{ inventory_hostname }}-{{ ansible_date_time.epoch[-6:] }}`
+
+### `run.sh` usage:
+```bash
+./run.sh install-software    # Run software install playbooks (Linux + Windows)
+./run.sh register-wazuh      # Run Wazuh agent registration
+./run.sh all                 # Both above in sequence
+./run.sh status              # Check service + Wazuh agent status on all hosts
+```
+
+---
+
+## Step 05 — Orchestrator (`05-orchestrator/`)
+
+### `deploy_all.sh`
+
+Runs steps in sequence with dependency checks:
+
+```
+1. Validate config/deployment.env (WAZUH_SERVER_IP must be set, AWS creds valid)
+2. Run 01-pre-requirements/deploy.sh create  → wait for CREATE_COMPLETE
+3. Run 02-secrets/deploy.sh create           → wait for CREATE_COMPLETE
+4. Run 03-ec2/deploy.sh create               → wait for all EC2 stacks CREATE_COMPLETE
+5. Run 04-configuration/inventory/generate_inventory.sh
+6. Run 04-configuration/run.sh all
+7. Print deployment-info.txt summary
+```
+
+`deployment-info.txt` must contain:
+- Asset ID, Hostname, Public IP, Private IP, OS, Role
+- SSH commands for Linux assets
+- RDP endpoint for Windows assets
+- Wazuh dashboard URL
+
+### `destroy_all.sh`
+
+Reverse order teardown:
+```
+1. Run 03-ec2/deploy.sh delete   → wait for DELETE_COMPLETE
+2. Run 02-secrets/deploy.sh delete
+3. Run 01-pre-requirements/deploy.sh delete
+4. Log summary of deleted resources
+```
+
+---
+
+## Key Technical Constraints
+
+- **Minimum AWS permissions** needed: EC2, CloudFormation, SecretsManager, IAM (limited), SSM
+- **All CF waits**: Use `aws cloudformation wait stack-create-complete` (not polling loops)
+- **Parallel EC2 deploys**: Step 03 deploys all EC2 stacks in parallel using background jobs (`&`) with `wait` at the end
+- **Windows WinRM**: Configure WinRM in Windows UserData so Ansible can connect without manual setup
+- **No hardcoded AMIs**: Always resolve AMIs via SSM Parameter Store at deploy time
+- **Service startup**: Every installed service must have `Restart=on-failure`, `RestartSec=10`, `StartLimitIntervalSec=60`, `StartLimitBurst=3` in its systemd unit (or Windows equivalent retry policy)
+
+---
+
+## Deliverables Checklist for Cursor
+
+- [ ] `config/deployment.env` with all variables documented
+- [ ] `01-pre-requirements/pre-requirements.yaml` + `deploy.sh`
+- [ ] `02-secrets/secrets.yaml` + `deploy.sh`
+- [ ] `03-ec2/templates/linux.yaml` + `03-ec2/templates/windows.yaml` + `03-ec2/deploy.sh`
+- [ ] `04-configuration/inventory/generate_inventory.sh`
+- [ ] `04-configuration/playbooks/install_software_linux.yaml`
+- [ ] `04-configuration/playbooks/install_software_windows.yaml`
+- [ ] `04-configuration/playbooks/register_wazuh_agent.yaml`
+- [ ] `04-configuration/roles/` (software_linux, software_windows, wazuh_agent)
+- [ ] `04-configuration/run.sh`
+- [ ] `05-orchestrator/deploy_all.sh` + `destroy_all.sh`
+- [ ] All scripts executable (`chmod +x`) and validated with `shellcheck`
+- [ ] All CF templates validated with `cfn-lint`

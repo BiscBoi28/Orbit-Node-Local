@@ -1,0 +1,14 @@
+[
+  {"ParameterKey": "VpcId",                "ParameterValue": "vpc-0bd3bc596c3f08051"},
+  {"ParameterKey": "SubnetId",             "ParameterValue": "subnet-0da8a278b6609bba3"},
+  {"ParameterKey": "SecurityGroupId",      "ParameterValue": "sg-08cf27e3eb43de137"},
+  {"ParameterKey": "InstanceProfileArn",   "ParameterValue": "arn:aws:iam::684418150056:instance-profile/iiith-orbit-dev-pre-deployment-dev-profile"},
+  {"ParameterKey": "DataVolumeId",         "ParameterValue": "vol-08e6a3d02fcfa16b4"},
+  {"ParameterKey": "ElasticIPAllocationId","ParameterValue": "eipalloc-0b0c2387ee39e6599"},
+  {"ParameterKey": "ElasticIP",            "ParameterValue": "16.58.158.189"},
+  {"ParameterKey": "SetupScriptS3Url",     "ParameterValue": "https://iiith-orbit-wazuh-scripts.s3.us-east-2.amazonaws.com/orbit-dev/orbit-dev-setup.sh"},
+  {"ParameterKey": "KeyName",              "ParameterValue": "iiith-orbit-key"},
+  {"ParameterKey": "WazuhManagerIp",       "ParameterValue": "18.116.159.176"},
+  {"ParameterKey": "InstanceType",         "ParameterValue": "t3.large"},
+  {"ParameterKey": "UseSpotInstance",      "ParameterValue": "false"}
+]

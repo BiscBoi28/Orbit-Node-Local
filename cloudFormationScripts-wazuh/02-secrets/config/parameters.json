@@ -1,0 +1,34 @@
+[
+  {
+    "ParameterKey": "WazuhIndexerUsername",
+    "ParameterValue": "admin"
+  },
+  {
+    "ParameterKey": "WazuhIndexerPassword",
+    "ParameterValue": "SecretPassword"
+  },
+  {
+    "ParameterKey": "WazuhApiUsername",
+    "ParameterValue": "wazuh-wui"
+  },
+  {
+    "ParameterKey": "WazuhApiPassword",
+    "ParameterValue": "Wazuh@2024Pass"
+  },
+  {
+    "ParameterKey": "Neo4jUri",
+    "ParameterValue": "neo4j+s://87e7ac55.databases.neo4j.io"
+  },
+  {
+    "ParameterKey": "Neo4jUsername",
+    "ParameterValue": "neo4j"
+  },
+  {
+    "ParameterKey": "Neo4jPassword",
+    "ParameterValue": "T1pOzBraJrNcFE5nJiA_vQkbCkeeV1xNMN9TJwKpZFA"
+  },
+  {
+    "ParameterKey": "OrbitCoreApiToken",
+    "ParameterValue": "CHANGE_ME"
+  }
+]

@@ -1,0 +1,4 @@
+# Local test (run-wazuh-setup-local.sh)
+wazuh-local-data/
+wazuh-docker/
+.env

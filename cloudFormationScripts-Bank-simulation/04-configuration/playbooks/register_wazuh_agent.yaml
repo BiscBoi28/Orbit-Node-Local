@@ -1,0 +1,125 @@
+---
+- name: Register Wazuh agent (Linux)
+  hosts: linux_rhel:linux_ubuntu
+  become: yes
+  vars:
+    wazuh_manager: "{{ wazuh_server_ip }}"
+    wazuh_port: "{{ wazuh_port | default('1514') }}"
+    wazuh_rpm_url: "https://packages.wazuh.com/4.x/yum/wazuh-agent-4.14.2-1.x86_64.rpm"
+    retries: 3
+    delay_sec: 10
+  tasks:
+    - name: Download Wazuh agent RPM (RHEL/Amazon Linux)
+      ansible.builtin.get_url:
+        url: "{{ wazuh_rpm_url }}"
+        dest: /tmp/wazuh-agent-4.14.2-1.x86_64.rpm
+        mode: '0644'
+      when: ansible_os_family == 'RedHat'
+
+    - name: Install wazuh-agent from RPM with manager and agent name (RHEL/Amazon Linux)
+      ansible.builtin.shell: |
+        rpm -ihv /tmp/wazuh-agent-4.14.2-1.x86_64.rpm
+      environment:
+        WAZUH_MANAGER: "{{ wazuh_manager }}"
+        WAZUH_AGENT_NAME: "{{ inventory_hostname }}"
+      args:
+        creates: /var/ossec
+      when: ansible_os_family == 'RedHat'
+
+    - name: Remove Wazuh RPM from tmp (RHEL/Amazon Linux)
+      ansible.builtin.file:
+        path: /tmp/wazuh-agent-4.14.2-1.x86_64.rpm
+        state: absent
+      when: ansible_os_family == 'RedHat'
+
+    - name: Install apt deps for Wazuh repo (Ubuntu)
+      ansible.builtin.apt:
+        name: [gnupg, apt-transport-https, ca-certificates]
+        state: present
+      when: ansible_os_family == 'Debian'
+
+    - name: Ensure keyrings directory exists (Ubuntu)
+      ansible.builtin.file:
+        path: /usr/share/keyrings
+        state: directory
+        mode: '0755'
+      when: ansible_os_family == 'Debian'
+
+    - name: Import Wazuh GPG key to keyring (Ubuntu)
+      ansible.builtin.shell: |
+        curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/wazuh.gpg --import
+        chmod 644 /usr/share/keyrings/wazuh.gpg
+      args:
+        creates: /usr/share/keyrings/wazuh.gpg
+      when: ansible_os_family == 'Debian'
+
+    - name: Add Wazuh repo (Ubuntu)
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4.x/apt/ stable main"
+        filename: wazuh
+        state: present
+      when: ansible_os_family == 'Debian'
+
+    - name: Install wazuh-agent (Ubuntu)
+      ansible.builtin.apt:
+        update_cache: yes
+        name: wazuh-agent
+        state: present
+      when: ansible_os_family == 'Debian'
+
+    - name: Configure Wazuh manager in ossec.conf
+      ansible.builtin.lineinfile:
+        path: /var/ossec/etc/ossec.conf
+        regexp: '^[[:space:]]*<address>.*</address>'
+        line: "  <address>{{ wazuh_manager }}</address>"
+      when: wazuh_manager | length > 0
+
+    - name: Enable and start wazuh-agent
+      ansible.builtin.systemd:
+        name: wazuh-agent
+        state: started
+        enabled: yes
+        daemon_reload: yes
+      ignore_errors: yes
+
+    - name: Verify agent status
+      ansible.builtin.command: systemctl is-active wazuh-agent
+      register: agent_status
+      until: agent_status.rc == 0
+      retries: "{{ retries }}"
+      delay: "{{ delay_sec }}"
+      ignore_errors: yes
+
+- name: Register Wazuh agent (Windows)
+  hosts: windows
+  vars:
+    wazuh_manager: "{{ wazuh_server_ip }}"
+    agent_name: "{{ inventory_hostname }}-{{ ansible_date_time.epoch[-6:] | default('000000') }}"
+    wazuh_msi_url: "https://packages.wazuh.com/4.x/windows/wazuh-agent-4.7.2-1.msi"
+    retries: 3
+    delay_sec: 10
+  tasks:
+    - name: Download Wazuh MSI
+      ansible.windows.win_get_url:
+        url: "{{ wazuh_msi_url }}"
+        dest: C:\\Temp\\wazuh-agent.msi
+
+    - name: Install Wazuh agent (silent)
+      ansible.windows.win_package:
+        path: C:\Temp\wazuh-agent.msi
+        arguments: '/q WAZUH_MANAGER={{ wazuh_manager }}'
+        state: present
+
+    - name: Start WazuhSvc and set automatic
+      ansible.windows.win_service:
+        name: WazuhSvc
+        start_mode: auto
+        state: started
+
+    - name: Verify Wazuh service
+      ansible.windows.win_service:
+        name: WazuhSvc
+      register: wazuh_svc
+      until: wazuh_svc.state is defined and wazuh_svc.state == 'running'
+      retries: "{{ retries }}"
+      delay: "{{ delay_sec }}"

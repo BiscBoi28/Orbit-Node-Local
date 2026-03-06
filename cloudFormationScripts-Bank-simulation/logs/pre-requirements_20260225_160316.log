@@ -1,0 +1,7 @@
+[2026-02-25 16:03:16] [INFO] Log file: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/logs/pre-requirements_20260225_160316.log
+[2026-02-25 16:03:16] [INFO] Creating stack njsecure-prod-pre-requirements
+
+Waiting for changeset to be created..
+Waiting for stack create/update to complete
+Successfully created/updated stack - njsecure-prod-pre-requirements
+[2026-02-25 16:04:03] [INFO] Stack njsecure-prod-pre-requirements CREATE_COMPLETE

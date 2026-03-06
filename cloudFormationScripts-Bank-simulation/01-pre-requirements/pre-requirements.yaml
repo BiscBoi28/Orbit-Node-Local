@@ -1,0 +1,455 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ORBIT Bank - VPC, Subnet, Security Groups, IAM (pre-requirements)
+
+Parameters:
+  AdminCIDR:
+    Type: String
+    Default: '0.0.0.0/0'
+    Description: CIDR for jump host admin access (SSH, RDP)
+    AllowedPattern: '^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$'
+  WazuhServerIp:
+    Type: String
+    Default: ''
+    Description: Wazuh server IP for agent egress (required for agent reporting)
+    AllowedPattern: '^(\d{1,3}\.){3}\d{1,3}$|^$'
+
+Conditions:
+  HasWazuhIp: !Not [!Equals [!Ref WazuhServerIp, '']]
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: orbit-bank-vpc
+        - Key: Project
+          Value: ORBIT
+        - Key: Environment
+          Value: simulation
+        - Key: Component
+          Value: bank-infrastructure
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: orbit-bank-igw
+        - Key: Project
+          Value: ORBIT
+        - Key: Environment
+          Value: simulation
+        - Key: Component
+          Value: bank-infrastructure
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: orbit-bank-public-subnet
+        - Key: Project
+          Value: ORBIT
+        - Key: Environment
+          Value: simulation
+        - Key: Component
+          Value: bank-infrastructure
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: orbit-bank-public-rt
+        - Key: Project
+          Value: ORBIT
+        - Key: Environment
+          Value: simulation
+        - Key: Component
+          Value: bank-infrastructure
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  SubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  SGDatabase:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: orbit-bank-sg-database
+      GroupDescription: Database servers - PostgreSQL, Oracle from app server
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref AdminCIDR
+          Description: SSH from admin (Ansible)
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref SGAppServer
+          Description: PostgreSQL from app server
+        - IpProtocol: tcp
+          FromPort: 1521
+          ToPort: 1521
+          SourceSecurityGroupId: !Ref SGAppServer
+          Description: Oracle from app server
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 1514
+          ToPort: 1514
+          CidrIp: !If [HasWazuhIp, !Sub '${WazuhServerIp}/32', '0.0.0.0/0']
+          Description: Wazuh agent
+        - IpProtocol: tcp
+          FromPort: 1515
+          ToPort: 1515
+          CidrIp: !If [HasWazuhIp, !Sub '${WazuhServerIp}/32', '0.0.0.0/0']
+          Description: Wazuh agent
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: All outbound
+      Tags:
+        - Key: Name
+          Value: orbit-bank-sg-database
+        - Key: Project
+          Value: ORBIT
+        - Key: Environment
+          Value: simulation
+        - Key: Component
+          Value: bank-infrastructure
+
+  SGAppServer:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: orbit-bank-sg-appserver
+      GroupDescription: Application servers - 8080, 8443 from web server
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref AdminCIDR
+          Description: SSH from admin (Ansible)
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          SourceSecurityGroupId: !Ref SGWebServer
+          Description: HTTP from web server
+        - IpProtocol: tcp
+          FromPort: 8443
+          ToPort: 8443
+          SourceSecurityGroupId: !Ref SGWebServer
+          Description: HTTPS from web server
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 1514
+          ToPort: 1514
+          CidrIp: !If [HasWazuhIp, !Sub '${WazuhServerIp}/32', '0.0.0.0/0']
+          Description: Wazuh agent
+        - IpProtocol: tcp
+          FromPort: 1515
+          ToPort: 1515
+          CidrIp: !If [HasWazuhIp, !Sub '${WazuhServerIp}/32', '0.0.0.0/0']
+          Description: Wazuh agent
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: All outbound
+      Tags:
+        - Key: Name
+          Value: orbit-bank-sg-appserver
+        - Key: Project
+          Value: ORBIT
+        - Key: Environment
+          Value: simulation
+        - Key: Component
+          Value: bank-infrastructure
+
+  SGWebServer:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: orbit-bank-sg-webserver
+      GroupDescription: Web servers - 80, 443 from internet
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref AdminCIDR
+          Description: SSH from admin (Ansible)
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: HTTP
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: HTTPS
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 1514
+          ToPort: 1514
+          CidrIp: !If [HasWazuhIp, !Sub '${WazuhServerIp}/32', '0.0.0.0/0']
+          Description: Wazuh agent
+        - IpProtocol: tcp
+          FromPort: 1515
+          ToPort: 1515
+          CidrIp: !If [HasWazuhIp, !Sub '${WazuhServerIp}/32', '0.0.0.0/0']
+          Description: Wazuh agent
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: All outbound
+      Tags:
+        - Key: Name
+          Value: orbit-bank-sg-webserver
+        - Key: Project
+          Value: ORBIT
+        - Key: Environment
+          Value: simulation
+        - Key: Component
+          Value: bank-infrastructure
+
+  SGActiveDirectory:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: orbit-bank-sg-activedirectory
+      GroupDescription: Active Directory - LDAP, Kerberos, SMB, RDP from VPC
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref AdminCIDR
+          Description: SSH from admin (Ansible)
+        - IpProtocol: tcp
+          FromPort: 389
+          ToPort: 389
+          CidrIp: 10.0.0.0/16
+          Description: LDAP
+        - IpProtocol: tcp
+          FromPort: 636
+          ToPort: 636
+          CidrIp: 10.0.0.0/16
+          Description: LDAPS
+        - IpProtocol: tcp
+          FromPort: 88
+          ToPort: 88
+          CidrIp: 10.0.0.0/16
+          Description: Kerberos
+        - IpProtocol: tcp
+          FromPort: 445
+          ToPort: 445
+          CidrIp: 10.0.0.0/16
+          Description: SMB
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 10.0.0.0/16
+          Description: RDP
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 1514
+          ToPort: 1514
+          CidrIp: !If [HasWazuhIp, !Sub '${WazuhServerIp}/32', '0.0.0.0/0']
+          Description: Wazuh agent
+        - IpProtocol: tcp
+          FromPort: 1515
+          ToPort: 1515
+          CidrIp: !If [HasWazuhIp, !Sub '${WazuhServerIp}/32', '0.0.0.0/0']
+          Description: Wazuh agent
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: All outbound
+      Tags:
+        - Key: Name
+          Value: orbit-bank-sg-activedirectory
+        - Key: Project
+          Value: ORBIT
+        - Key: Environment
+          Value: simulation
+        - Key: Component
+          Value: bank-infrastructure
+
+  SGJumpHost:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: orbit-bank-sg-jumphost
+      GroupDescription: Jump host - SSH, RDP from admin CIDR
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref AdminCIDR
+          Description: SSH
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: !Ref AdminCIDR
+          Description: RDP
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 1514
+          ToPort: 1514
+          CidrIp: !If [HasWazuhIp, !Sub '${WazuhServerIp}/32', '0.0.0.0/0']
+          Description: Wazuh agent
+        - IpProtocol: tcp
+          FromPort: 1515
+          ToPort: 1515
+          CidrIp: !If [HasWazuhIp, !Sub '${WazuhServerIp}/32', '0.0.0.0/0']
+          Description: Wazuh agent
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: All outbound
+      Tags:
+        - Key: Name
+          Value: orbit-bank-sg-jumphost
+        - Key: Project
+          Value: ORBIT
+        - Key: Environment
+          Value: simulation
+        - Key: Component
+          Value: bank-infrastructure
+
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: orbit-bank-ec2-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Policies:
+        - PolicyName: SecretsManagerOrbitBank
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:DescribeSecret
+                Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:orbit-bank/*'
+        - PolicyName: SSMBucketAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt SSMBucket.Arn
+                  - !Sub '${SSMBucket.Arn}/*'
+      Tags:
+        - Key: Name
+          Value: orbit-bank-ec2-role
+        - Key: Project
+          Value: ORBIT
+        - Key: Environment
+          Value: simulation
+        - Key: Component
+          Value: bank-infrastructure
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: njsecure-prod-ec2-instance-profile
+      Roles:
+        - !Ref EC2Role
+
+  SSMBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'njsecure-prod-ssm-${AWS::AccountId}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Name
+          Value: njsecure-prod-ssm-bucket
+        - Key: Project
+          Value: ORBIT
+        - Key: Environment
+          Value: simulation
+
+Outputs:
+  VpcId:
+    Description: VPC ID
+    Value: !Ref VPC
+    Export:
+      Name: !Sub '${AWS::StackName}-VpcId'
+  PublicSubnetId:
+    Description: Public subnet ID
+    Value: !Ref PublicSubnet
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnetId'
+  EC2InstanceProfileArn:
+    Description: EC2 instance profile ARN
+    Value: !GetAtt EC2InstanceProfile.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-EC2InstanceProfileArn'
+  SSMBucketName:
+    Description: S3 bucket for SSM file transfer (Ansible over SSM)
+    Value: !Ref SSMBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-SSMBucketName'
+  SGDatabase:
+    Description: Security group for database servers
+    Value: !Ref SGDatabase
+    Export:
+      Name: !Sub '${AWS::StackName}-SG-Database'
+  SGAppServer:
+    Description: Security group for application servers
+    Value: !Ref SGAppServer
+    Export:
+      Name: !Sub '${AWS::StackName}-SG-AppServer'
+  SGWebServer:
+    Description: Security group for web servers
+    Value: !Ref SGWebServer
+    Export:
+      Name: !Sub '${AWS::StackName}-SG-WebServer'
+  SGActiveDirectory:
+    Description: Security group for Active Directory
+    Value: !Ref SGActiveDirectory
+    Export:
+      Name: !Sub '${AWS::StackName}-SG-ActiveDirectory'
+  SGJumpHost:
+    Description: Security group for jump hosts
+    Value: !Ref SGJumpHost
+    Export:
+      Name: !Sub '${AWS::StackName}-SG-JumpHost'

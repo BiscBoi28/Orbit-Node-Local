@@ -1,0 +1,240 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'ORBIT Dev Node Pre-Deployment - Security Group, IAM, EBS, EIP for orbit-dev EC2 (run once)'
+
+Parameters:
+  VpcId:
+    Type: String
+    Description: VPC ID - share the VPC from the wazuh pre-deployment stack
+
+  SubnetId:
+    Type: String
+    Description: Subnet ID - share the subnet from the wazuh pre-deployment stack
+
+  AdminIpCidr:
+    Type: String
+    Default: '0.0.0.0/0'
+    Description: CIDR block for SSH access (POC only - restrict in production)
+
+  EbsVolumeSize:
+    Type: Number
+    Default: 80
+    MinValue: 30
+    MaxValue: 500
+    Description: Size of EBS volume for persistent data (GB)
+
+  EbsDeviceName:
+    Type: String
+    Default: '/dev/sdf'
+    Description: Device name for EBS volume attachment
+
+  DataMountPath:
+    Type: String
+    Default: '/data'
+    Description: Mount path for persistent data volume
+
+Resources:
+  # Security Group for orbit-dev services
+  OrbitDevSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: orbit-dev-sg
+      GroupDescription: Security group for ORBIT Dev Node (Neo4j, Presidio, JuiceShop, ORC)
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref AdminIpCidr
+          Description: SSH access for admin
+        - IpProtocol: tcp
+          FromPort: 7474
+          ToPort: 7474
+          CidrIp: 0.0.0.0/0
+          Description: Neo4j HTTP browser UI (POC - restrict in production)
+        - IpProtocol: tcp
+          FromPort: 7473
+          ToPort: 7473
+          CidrIp: 0.0.0.0/0
+          Description: Neo4j HTTPS browser UI (POC - restrict in production)
+        - IpProtocol: tcp
+          FromPort: 7687
+          ToPort: 7687
+          CidrIp: 0.0.0.0/0
+          Description: Neo4j Bolt protocol (POC - restrict in production)
+        - IpProtocol: tcp
+          FromPort: 5001
+          ToPort: 5001
+          CidrIp: 0.0.0.0/0
+          Description: Presidio Analyzer API (POC - restrict in production)
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+          Description: OWASP Juice Shop (POC - restrict in production)
+        - IpProtocol: tcp
+          FromPort: 8000
+          ToPort: 8000
+          CidrIp: 0.0.0.0/0
+          Description: ORC Orchestrator API (POC - restrict in production)
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound (Wazuh agent, Docker pulls, AWS APIs)
+      Tags:
+        - Key: Name
+          Value: orbit-dev-sg
+        - Key: Environment
+          Value: dev
+        - Key: Component
+          Value: orbit-dev
+        - Key: Owner
+          Value: orbit
+        - Key: project
+          Value: iiith-orbit-node
+        - Key: created_by
+          Value: vvithala
+        - Key: resource_type
+          Value: dev
+
+  # IAM Role for orbit-dev EC2
+  OrbitDevRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: OrbitDevSecretsAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:DescribeSecret
+                Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:orbit/*'
+        - PolicyName: OrbitDevS3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - 'arn:aws:s3:::iiith-orbit-wazuh-scripts'
+                  - 'arn:aws:s3:::iiith-orbit-wazuh-scripts/*'
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-role'
+        - Key: Environment
+          Value: dev
+        - Key: project
+          Value: iiith-orbit-node
+        - Key: created_by
+          Value: vvithala
+        - Key: resource_type
+          Value: dev
+
+  OrbitDevInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub '${AWS::StackName}-profile'
+      Roles:
+        - !Ref OrbitDevRole
+
+  # EBS Volume for orbit-dev persistent data (Neo4j, Presidio, etc.)
+  OrbitDevDataVolume:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Size: !Ref EbsVolumeSize
+      VolumeType: gp3
+      Encrypted: true
+      Tags:
+        - Key: Name
+          Value: orbit-dev-data
+        - Key: Environment
+          Value: dev
+        - Key: Component
+          Value: orbit-dev
+        - Key: Owner
+          Value: orbit
+        - Key: project
+          Value: iiith-orbit-node
+        - Key: created_by
+          Value: vvithala
+        - Key: resource_type
+          Value: dev
+    DeletionPolicy: Snapshot
+
+  # Elastic IP for orbit-dev (persists across EC2 stack deletions)
+  OrbitDevElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: orbit-dev-eip
+        - Key: Environment
+          Value: dev
+        - Key: Component
+          Value: orbit-dev
+        - Key: Owner
+          Value: orbit
+        - Key: project
+          Value: iiith-orbit-node
+        - Key: created_by
+          Value: vvithala
+        - Key: resource_type
+          Value: dev
+
+Outputs:
+  SecurityGroupId:
+    Description: orbit-dev Security Group ID
+    Value: !Ref OrbitDevSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-SecurityGroupId'
+
+  InstanceProfileArn:
+    Description: IAM Instance Profile ARN
+    Value: !GetAtt OrbitDevInstanceProfile.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-InstanceProfileArn'
+
+  DataVolumeId:
+    Description: EBS Volume ID for orbit-dev persistent data
+    Value: !Ref OrbitDevDataVolume
+    Export:
+      Name: !Sub '${AWS::StackName}-DataVolumeId'
+
+  DataMountPath:
+    Description: Mount path for persistent data
+    Value: !Ref DataMountPath
+    Export:
+      Name: !Sub '${AWS::StackName}-DataMountPath'
+
+  EbsDeviceName:
+    Description: EBS device name for volume attachment
+    Value: !Ref EbsDeviceName
+    Export:
+      Name: !Sub '${AWS::StackName}-EbsDeviceName'
+
+  ElasticIP:
+    Description: Elastic IP for orbit-dev (permanent)
+    Value: !Ref OrbitDevElasticIP
+    Export:
+      Name: !Sub '${AWS::StackName}-ElasticIP'
+
+  ElasticIPAllocationId:
+    Description: Elastic IP Allocation ID
+    Value: !GetAtt OrbitDevElasticIP.AllocationId
+    Export:
+      Name: !Sub '${AWS::StackName}-ElasticIPAllocationId'

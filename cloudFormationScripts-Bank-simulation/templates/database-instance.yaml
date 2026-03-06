@@ -1,0 +1,321 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Database CloudFormation template for ORBIT Bank infrastructure - extends Linux template with PostgreSQL support'
+
+Parameters:
+  Hostname:
+    Type: String
+    Description: 'Instance hostname'
+    MinLength: 1
+    MaxLength: 63
+    AllowedPattern: '^[a-z0-9]([a-z0-9-]*[a-z0-9])?$'
+    ConstraintDescription: 'Must be a valid hostname (lowercase alphanumeric and hyphens)'
+  
+  OperatingSystem:
+    Type: String
+    Description: 'Operating system type'
+    AllowedValues:
+      - RHEL8
+      - Ubuntu2204
+    Default: RHEL8
+  
+  InstanceType:
+    Type: String
+    Description: 'EC2 instance type'
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+    Default: t3.small
+  
+  SoftwarePackages:
+    Type: String
+    Description: 'Comma-separated list of software packages to install'
+    Default: ''
+  
+  SecurityGroupId:
+    Type: String
+    Description: 'Security group ID from pre-deployment stack'
+  
+  SubnetId:
+    Type: String
+    Description: 'Subnet ID from pre-deployment stack'
+  
+  InstanceProfileArn:
+    Type: String
+    Description: 'IAM instance profile ARN from pre-deployment stack'
+  
+  AssetId:
+    Type: String
+    Description: 'Asset identifier from CSV configuration'
+  
+  BusinessDomain:
+    Type: String
+    Description: 'Business domain tag'
+  
+  SensitivityLevel:
+    Type: String
+    Description: 'Data sensitivity level tag'
+
+  PreDeploymentStackName:
+    Type: String
+    Description: 'Name of the pre-deployment stack for importing values'
+    Default: 'njsecure-prod-pre-deployment'
+
+  DatabaseType:
+    Type: String
+    Description: 'Database type'
+    AllowedValues:
+      - PostgreSQL
+    Default: PostgreSQL
+  
+  DatabaseVersion:
+    Type: String
+    Description: 'PostgreSQL version'
+    Default: '15'
+  
+  DatabasePort:
+    Type: Number
+    Description: 'Database port'
+    Default: 5432
+    MinValue: 1024
+    MaxValue: 65535
+  
+  DataVolumeSize:
+    Type: Number
+    Description: 'EBS volume size in GB for database storage'
+    Default: 100
+    MinValue: 10
+    MaxValue: 16384
+
+Conditions:
+  IsRHEL8: !Equals [!Ref OperatingSystem, 'RHEL8']
+  IsUbuntu2204: !Equals [!Ref OperatingSystem, 'Ubuntu2204']
+  HasSoftwarePackages: !Not [!Equals [!Ref SoftwarePackages, '']]
+
+Mappings:
+  AmiMap:
+    RHEL8:
+      SsmParameter: /aws/service/rhel/8/latest/x86_64
+    Ubuntu2204:
+      SsmParameter: /aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id
+
+Resources:
+  DataVolume:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: !GetAtt Instance.AvailabilityZone
+      Size: !Ref DataVolumeSize
+      VolumeType: gp3
+      Encrypted: true
+      Tags:
+        - Key: Name
+          Value: !Sub 'njsecure-prod-${Hostname}-data-volume'
+        - Key: Asset_ID
+          Value: !Ref AssetId
+        - Key: project
+          Value: ORBIT
+        - Key: environment
+          Value: simulation
+        - Key: component
+          Value: bank-infrastructure
+  
+  VolumeAttachment:
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      Device: /dev/xvdf
+      InstanceId: !Ref Instance
+      VolumeId: !Ref DataVolume
+
+  Instance:
+    Type: AWS::EC2::Instance
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT15M
+        Count: 1
+    Properties:
+      ImageId: !Sub 
+        - '{{resolve:ssm:${SsmParam}}}'
+        - SsmParam: !FindInMap [AmiMap, !Ref OperatingSystem, SsmParameter]
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref InstanceProfileArn
+      SubnetId: !Ref SubnetId
+      SecurityGroupIds:
+        - !Ref SecurityGroupId
+        - Fn::ImportValue: !Sub '${PreDeploymentStackName}-WazuhAgentSecurityGroupId'
+      Tags:
+        - Key: Name
+          Value: !Ref Hostname
+        - Key: Asset_ID
+          Value: !Ref AssetId
+        - Key: Business_Domain
+          Value: !Ref BusinessDomain
+        - Key: Sensitivity_Level
+          Value: !Ref SensitivityLevel
+        - Key: project
+          Value: ORBIT
+        - Key: environment
+          Value: simulation
+        - Key: component
+          Value: bank-infrastructure
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -e
+          
+          # Logging function
+          log() {
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a /var/log/cloud-init-custom.log
+          }
+          
+          log "Starting database instance configuration for ${Hostname}"
+          
+          # Set hostname
+          log "Setting hostname to ${Hostname}"
+          hostnamectl set-hostname ${Hostname}
+          
+          # Update /etc/hosts
+          echo "127.0.0.1 ${Hostname}" >> /etc/hosts
+          
+          # Update system and install base packages based on OS
+          if [[ "${OperatingSystem}" == "RHEL8" ]]; then
+            log "Detected RHEL8 - updating system with yum"
+            yum update -y
+            
+            # Install CloudFormation helper scripts
+            yum install -y python3-pip
+            pip3 install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-py3-latest.tar.gz
+            
+            # Install software packages if specified
+            if [[ -n "${SoftwarePackages}" ]]; then
+              log "Installing packages: ${SoftwarePackages}"
+              PACKAGES=$(echo "${SoftwarePackages}" | tr ',' ' ')
+              yum install -y $PACKAGES || log "WARNING: Some packages failed to install"
+            fi
+            
+            # Install PostgreSQL
+            log "Installing PostgreSQL ${DatabaseVersion}"
+            yum install -y postgresql${DatabaseVersion}-server postgresql${DatabaseVersion}
+            
+          elif [[ "${OperatingSystem}" == "Ubuntu2204" ]]; then
+            log "Detected Ubuntu 22.04 - updating system with apt-get"
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update
+            apt-get upgrade -y
+            
+            # Install CloudFormation helper scripts
+            apt-get install -y python3-pip
+            pip3 install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-py3-latest.tar.gz
+            
+            # Install software packages if specified
+            if [[ -n "${SoftwarePackages}" ]]; then
+              log "Installing packages: ${SoftwarePackages}"
+              PACKAGES=$(echo "${SoftwarePackages}" | tr ',' ' ')
+              apt-get install -y $PACKAGES || log "WARNING: Some packages failed to install"
+            fi
+            
+            # Install PostgreSQL
+            log "Installing PostgreSQL ${DatabaseVersion}"
+            apt-get install -y postgresql-${DatabaseVersion} postgresql-client-${DatabaseVersion}
+          fi
+          
+          # Wait for EBS volume to be attached
+          log "Waiting for EBS volume to be attached"
+          while [ ! -e /dev/xvdf ]; do
+            sleep 2
+          done
+          log "EBS volume detected at /dev/xvdf"
+          
+          # Format and mount EBS volume
+          log "Formatting EBS volume"
+          mkfs -t ext4 /dev/xvdf
+          
+          log "Creating mount point at /var/lib/postgresql"
+          mkdir -p /var/lib/postgresql
+          
+          log "Mounting EBS volume"
+          mount /dev/xvdf /var/lib/postgresql
+          
+          # Add fstab entry for persistent mount
+          log "Adding fstab entry for persistent mount"
+          echo "/dev/xvdf /var/lib/postgresql ext4 defaults,nofail 0 2" >> /etc/fstab
+          
+          # Set proper ownership
+          if [[ "${OperatingSystem}" == "RHEL8" ]]; then
+            chown -R postgres:postgres /var/lib/postgresql
+            
+            # Initialize PostgreSQL database
+            log "Initializing PostgreSQL database"
+            su - postgres -c "/usr/bin/postgresql-${DatabaseVersion}-setup initdb"
+            
+            # Configure PostgreSQL
+            log "Configuring PostgreSQL to listen on port ${DatabasePort}"
+            sed -i "s/#port = 5432/port = ${DatabasePort}/" /var/lib/pgsql/${DatabaseVersion}/data/postgresql.conf
+            sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" /var/lib/pgsql/${DatabaseVersion}/data/postgresql.conf
+            
+            # Enable and start PostgreSQL
+            log "Enabling and starting PostgreSQL service"
+            systemctl enable postgresql-${DatabaseVersion}
+            systemctl start postgresql-${DatabaseVersion}
+            
+          elif [[ "${OperatingSystem}" == "Ubuntu2204" ]]; then
+            chown -R postgres:postgres /var/lib/postgresql
+            
+            # Stop PostgreSQL to reconfigure
+            systemctl stop postgresql
+            
+            # Configure PostgreSQL
+            log "Configuring PostgreSQL to listen on port ${DatabasePort}"
+            sed -i "s/port = 5432/port = ${DatabasePort}/" /etc/postgresql/${DatabaseVersion}/main/postgresql.conf
+            sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" /etc/postgresql/${DatabaseVersion}/main/postgresql.conf
+            
+            # Enable and start PostgreSQL
+            log "Enabling and starting PostgreSQL service"
+            systemctl enable postgresql
+            systemctl start postgresql
+          fi
+          
+          log "PostgreSQL installation and configuration completed successfully"
+          
+          # Verify PostgreSQL is running
+          if systemctl is-active --quiet postgresql || systemctl is-active --quiet postgresql-${DatabaseVersion}; then
+            log "PostgreSQL service is running"
+          else
+            log "ERROR: PostgreSQL service failed to start"
+            exit 1
+          fi
+          
+          log "Database instance configuration completed successfully"
+          
+          # Signal CloudFormation that the instance is ready
+          /usr/local/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Instance --region ${AWS::Region}
+
+Outputs:
+  InstanceId:
+    Description: 'EC2 instance ID'
+    Value: !Ref Instance
+    Export:
+      Name: !Sub '${AWS::StackName}-InstanceId'
+  
+  PrivateIp:
+    Description: 'Private IP address'
+    Value: !GetAtt Instance.PrivateIp
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateIp'
+  
+  PublicIp:
+    Description: 'Public IP address (if assigned)'
+    Value: !GetAtt Instance.PublicIp
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicIp'
+  
+  Hostname:
+    Description: 'Instance hostname'
+    Value: !Ref Hostname
+    Export:
+      Name: !Sub '${AWS::StackName}-Hostname'
+  
+  DataVolumeId:
+    Description: 'EBS data volume ID'
+    Value: !Ref DataVolume
+    Export:
+      Name: !Sub '${AWS::StackName}-DataVolumeId'

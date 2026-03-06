@@ -1,0 +1,14 @@
+=== Pre-Deployment Stack Ready ===
+
+Stack outputs:
+--------------------------------------------------------------------------------------------------------------------
+|                                                  DescribeStacks                                                  |
++-----------------------+------------------------------------------------------------------------------------------+
+|  ElasticIP            |  16.58.158.189                                                                           |
+|  DataMountPath        |  /data                                                                                   |
+|  SecurityGroupId      |  sg-08cf27e3eb43de137                                                                    |
+|  EbsDeviceName        |  /dev/sdf                                                                                |
+|  DataVolumeId         |  vol-08e6a3d02fcfa16b4                                                                   |
+|  ElasticIPAllocationId|  eipalloc-0b0c2387ee39e6599                                                              |
+|  InstanceProfileArn   |  arn:aws:iam::684418150056:instance-profile/iiith-orbit-dev-pre-deployment-dev-profile   |
++-----------------------+------------------------------------------------------------------------------------------+

@@ -1,0 +1,10 @@
+all:
+  children:
+    wazuh_server:
+      hosts:
+        wazuh-node:
+          ansible_host: 18.116.159.176
+          ansible_user: ubuntu
+          # Use your EC2 key pair (or set SSH_PRIVATE_KEY_FILE when running run-ec2.sh)
+          ansible_ssh_private_key_file: ~/.ssh/iiith-orbit-key.pem
+          ansible_python_interpreter: /usr/bin/python3

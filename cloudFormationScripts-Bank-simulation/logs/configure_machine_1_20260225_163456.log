@@ -1,0 +1,81 @@
+[2026-02-25 16:34:56] [INFO] Log file: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/logs/configure_machine_1_20260225_163456.log
+[2026-02-25 16:34:56] [INFO] Configure machine 1 (NS-01) started
+[2026-02-25 16:34:58] [INFO] Machine 1 host: corebank-db-01
+[2026-02-25 16:34:58] [INFO] Machine 1: Generate inventory (started)
+[2026-02-25 16:35:06] [INFO] Generated /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/inventory/host_software.yml
+[2026-02-25 16:35:06] [INFO] Generated /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/inventory/hosts.ini
+[2026-02-25 16:35:06] [INFO] Machine 1: Generate inventory (completed)
+[2026-02-25 16:35:06] [INFO] Inventory: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/inventory/hosts.ini
+[2026-02-25 16:35:06] [INFO] Using AWS SSM for Ansible (no SSH key)
+[2026-02-25 16:35:06] [INFO] Using host_software: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/04-configuration/inventory/host_software.yml
+[2026-02-25 16:35:06] [INFO] Machine 1: Install software (started) -- playbook install_software_linux.yaml --limit corebank-db-01
+[WARNING]: Found variable using reserved name: retries
+
+PLAY [Install software on Linux hosts] *****************************************
+
+TASK [Gathering Facts] *********************************************************
+[WARNING]: Platform linux on host corebank-db-01 is using the discovered Python
+interpreter at /usr/bin/python3.9, but future installation of another Python
+interpreter could change the meaning of that path. See
+https://docs.ansible.com/ansible-
+core/2.18/reference_appendices/interpreter_discovery.html for more information.
+ok: [corebank-db-01]
+
+TASK [Set package list (Amazon Linux 2023)] ************************************
+ok: [corebank-db-01]
+
+TASK [Set package list (other Linux)] ******************************************
+skipping: [corebank-db-01]
+
+TASK [Install packages (via package module)] ***********************************
+changed: [corebank-db-01]
+
+TASK [Enable and start known systemd services] *********************************
+skipping: [corebank-db-01]
+
+PLAY RECAP *********************************************************************
+corebank-db-01             : ok=3    changed=1    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0   
+
+[2026-02-25 16:35:35] [INFO] Machine 1: Install software (completed OK)
+[2026-02-25 16:35:35] [INFO] Machine 1: Register Wazuh agent (started) -- playbook register_wazuh_agent.yaml --limit corebank-db-01
+[WARNING]: Found variable using reserved name: retries
+
+PLAY [Register Wazuh agent (Linux)] ********************************************
+
+TASK [Gathering Facts] *********************************************************
+[WARNING]: Platform linux on host corebank-db-01 is using the discovered Python
+interpreter at /usr/bin/python3.9, but future installation of another Python
+interpreter could change the meaning of that path. See
+https://docs.ansible.com/ansible-
+core/2.18/reference_appendices/interpreter_discovery.html for more information.
+ok: [corebank-db-01]
+
+TASK [Import Wazuh GPG key (RHEL/Amazon Linux)] ********************************
+changed: [corebank-db-01]
+
+TASK [Add Wazuh repository (RHEL/Amazon Linux)] ********************************
+changed: [corebank-db-01]
+
+TASK [Install wazuh-agent (RHEL/Amazon Linux)] *********************************
+changed: [corebank-db-01]
+
+TASK [Add Wazuh repo (Ubuntu)] *************************************************
+skipping: [corebank-db-01]
+
+TASK [Import Wazuh GPG key (Ubuntu)] *******************************************
+skipping: [corebank-db-01]
+
+TASK [Install wazuh-agent (Ubuntu)] ********************************************
+skipping: [corebank-db-01]
+
+TASK [Configure Wazuh manager in ossec.conf] ***********************************
+changed: [corebank-db-01]
+
+TASK [Enable and start wazuh-agent] ********************************************
+fatal: [corebank-db-01]: FAILED! => {"changed": false, "msg": "Unable to start service wazuh-agent: Job for wazuh-agent.service failed because the control process exited with error code.\nSee \"systemctl status wazuh-agent.service\" and \"journalctl -xeu wazuh-agent.service\" for details.\n"}
+
+PLAY RECAP *********************************************************************
+corebank-db-01             : ok=5    changed=4    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0   
+
+[2026-02-25 16:37:04] [WARN] Machine 1: Register Wazuh agent (completed with errors, check Ansible output above)
+[2026-02-25 16:37:04] [INFO] Configure machine 1 finished. Full log: /Users/ravikiranponduri/Desktop/ORBIT-CyberGraph/cloudFormationScripts-Bank-simulation/logs/configure_machine_1_20260225_163456.log

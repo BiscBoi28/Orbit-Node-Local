@@ -1,0 +1,35 @@
+---
+- name: Install software on Windows hosts
+  hosts: windows
+  vars:
+    retries: 3
+    delay_sec: 10
+    software_packages: "{{ (host_software | default({}))[inventory_hostname] | default('') }}"
+  tasks:
+    - name: Install Chocolatey packages
+      chocolatey.chocolatey.win_chocolatey:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ software_packages.split(',') | map('trim') | select | list }}"
+      when: software_packages | length > 0
+      ignore_errors: yes
+
+    - name: Set service to automatic
+      ansible.windows.win_service:
+        name: "{{ item }}"
+        start_mode: auto
+        state: started
+      loop: "{{ (service_list | default([])) }}"
+      ignore_errors: yes
+      when: service_list is defined
+
+    - name: Check service with retry
+      ansible.windows.win_service:
+        name: "{{ service_to_check | default('WazuhSvc') }}"
+        state: started
+      register: svc_result
+      until: svc_result.state is defined and svc_result.state == 'running'
+      retries: "{{ retries }}"
+      delay: "{{ delay_sec }}"
+      when: service_to_check is defined
+      ignore_errors: yes

@@ -1,0 +1,17 @@
+---
+- name: Install Chocolatey packages
+  community.windows.chocolatey:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ software_packages | default([]) }}"
+  when: software_packages | length > 0
+  ignore_errors: yes
+
+- name: Set services to automatic
+  ansible.windows.win_service:
+    name: "{{ item }}"
+    start_mode: auto
+    state: started
+  loop: "{{ service_list | default([]) }}"
+  when: service_list is defined
+  ignore_errors: yes

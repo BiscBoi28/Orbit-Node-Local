@@ -1,0 +1,105 @@
+---
+# Validate deployment against ORBIT_simulated_bank.csv expectations.
+# Run with: ansible-playbook -i <inventory> -e @expected_installation.yml playbooks/validate_installation.yaml
+- name: Validate Linux hosts (OS, packages, services)
+  hosts: linux_rhel:linux_ubuntu
+  become: yes
+  vars:
+    expected: "{{ (expected_hosts | default({}))[inventory_hostname] | default({}) }}"
+  tasks:
+    - name: Gather package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert OS family and version
+      ansible.builtin.assert:
+        that:
+          - ansible_os_family == expected.os_family
+          - ansible_distribution == expected.os_distribution
+          - ansible_distribution_major_version == expected.os_major_version
+        fail_msg: "OS mismatch. Expected {{ expected.os_family }}/{{ expected.os_distribution }} {{ expected.os_major_version }}, got {{ ansible_os_family }}/{{ ansible_distribution }} {{ ansible_distribution_major_version }}"
+      when: expected | length > 0
+
+    - name: Mark each expected package as found if installed (exact or prefix match)
+      ansible.builtin.set_fact:
+        _pkg_ok: "{{ _pkg_ok | default([]) + [item | trim] }}"
+      loop: "{{ expected.packages | default([]) }}"
+      when: >
+        (expected.packages | default([])) | length > 0
+        and (
+          (packages | default({})).keys() | list | select('match', '^' + (item | trim | lower) + '(-|\\.|$)') | list | length > 0
+          or (item | trim | lower) in (packages | default({})).keys() | map('lower') | list
+        )
+
+    - name: Assert all expected packages installed
+      ansible.builtin.assert:
+        that: (expected.packages | default([])) | length == 0 or (_pkg_ok | default([]) | length) >= (expected.packages | length)
+        fail_msg: "Missing packages. Expected (or prefix): {{ expected.packages }}. Installed sample: {{ (packages | default({})).keys() | list | first(30) }}"
+      when: (expected.packages | default([])) | length > 0
+
+    - name: Report packages OK
+      ansible.builtin.debug:
+        msg: "Packages OK for {{ inventory_hostname }}: {{ expected.packages }}"
+      when: (expected.packages | default([])) | length > 0
+
+    - name: Check service exists and is enabled
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+        daemon_reload: yes
+      loop: "{{ expected.services | default([]) }}"
+      when: (expected.services | default([])) | length > 0
+      register: _svc_start
+      ignore_errors: yes
+
+    - name: Stop service (for restart test)
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: stopped
+      loop: "{{ expected.services | default([]) }}"
+      when: (expected.services | default([])) | length > 0
+      ignore_errors: yes
+
+    - name: Start service
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: started
+      loop: "{{ expected.services | default([]) }}"
+      when: (expected.services | default([])) | length > 0
+
+    - name: Verify service active after restart
+      ansible.builtin.command: systemctl is-active {{ item }}
+      loop: "{{ expected.services | default([]) }}"
+      register: _active
+      failed_when: _active.rc != 0 or _active.stdout != 'active'
+      when: (expected.services | default([])) | length > 0
+
+- name: Validate Windows hosts (OS, packages)
+  hosts: windows
+  vars:
+    expected: "{{ (expected_hosts | default({}))[inventory_hostname] | default({}) }}"
+  tasks:
+    - name: Assert Windows OS
+      ansible.builtin.assert:
+        that:
+          - ansible_os_family == 'Windows'
+          - expected.os_distribution == 'Windows'
+        fail_msg: "OS mismatch. Expected Windows."
+      when: expected | length > 0
+
+    - name: Get Chocolatey installed packages (Windows)
+      ansible.windows.win_shell: choco list --local-only --limit-output
+      register: _choco_list
+      changed_when: false
+
+    - name: Set installed package names from choco (Windows)
+      ansible.builtin.set_fact:
+        _choco_installed: "{{ (_choco_list.stdout_lines | default([])) | map('regex_replace', '\\|.*', '') | map('trim') | map('lower') | list }}"
+
+    - name: Assert expected Windows packages in choco list
+      ansible.builtin.assert:
+        that: "item | lower in (_choco_installed | default([]))"
+        fail_msg: "Package {{ item }} not found. Installed: {{ _choco_installed | default([]) }}"
+      loop: "{{ expected.packages | default([]) }}"
+      when: (expected.packages | default([])) | length > 0

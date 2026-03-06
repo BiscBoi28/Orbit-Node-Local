@@ -1,0 +1,142 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ORBIT Bank - Reusable Windows EC2 (Server 2022)
+
+Parameters:
+  AssetID:
+    Type: String
+    Description: Asset ID from CSV
+  Hostname:
+    Type: String
+    MinLength: 1
+    MaxLength: 15
+    AllowedPattern: '^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$'
+    Description: Instance hostname
+  TechnicalRole:
+    Type: String
+    Description: Technical role for tagging
+  OperatingSystem:
+    Type: String
+    Default: WindowsServer2022
+    AllowedValues:
+      - WindowsServer2022
+    Description: OS type
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+    Description: EC2 instance type
+  SoftwarePackages:
+    Type: String
+    Default: ''
+    Description: Comma-separated packages (Chocolatey names)
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID from pre-requirements
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet ID from pre-requirements
+  SecurityGroupIds:
+    Type: CommaDelimitedList
+    Description: Security group IDs for this instance
+  InstanceProfileArn:
+    Type: String
+    Description: EC2 instance profile ARN
+  KeyPairName:
+    Type: String
+    Default: ''
+    Description: EC2 key pair name (optional for Windows RDP)
+  AdminPassword:
+    Type: String
+    NoEcho: true
+    Description: Windows Administrator password from Secrets Manager
+  WazuhServerIP:
+    Type: String
+    Default: ''
+  WazuhPort:
+    Type: String
+    Default: '1514'
+
+Conditions:
+  HasKeyPair: !Not [!Equals [!Ref KeyPairName, '']]
+
+Mappings:
+  AmiMap:
+    WindowsServer2022:
+      SsmParam: /aws/service/ami-windows-latest/Windows_Server-2022-English-Full-Base
+
+Resources:
+  Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Sub
+        - '{{resolve:ssm:${SsmParam}}}'
+        - SsmParam: !FindInMap [AmiMap, !Ref OperatingSystem, SsmParam]
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Select [1, !Split ['/', !Ref InstanceProfileArn]]
+      KeyName: !If [HasKeyPair, !Ref KeyPairName, !Ref 'AWS::NoValue']
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          GroupSet: !Ref SecurityGroupIds
+          SubnetId: !Ref SubnetId
+      UserData:
+        Fn::Base64: !Sub
+          - |
+            <powershell>
+            $ErrorActionPreference = "Stop"
+            echo "[$(Get-Date -Format o)] Configuring ${Hostname}"
+            Rename-Computer -NewName "${Hostname}" -Force -ErrorAction Stop
+            Set-ExecutionPolicy Bypass -Scope Process -Force
+            [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor 3072
+            try {
+              iex ((New-Object Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+            } catch { echo "Chocolatey install failed: $_" }
+            if ("${SoftwarePackages}" -ne "") {
+              $packages = "${SoftwarePackages}" -split ","
+              foreach ($p in $packages) { $p = $p.Trim(); if ($p) { choco install $p -y --no-progress 2>$null } }
+            }
+            & winrm quickconfig -q
+            echo "[$(Get-Date -Format o)] Config done"
+            </powershell>
+          - Hostname: !Ref Hostname
+            SoftwarePackages: !Ref SoftwarePackages
+      Tags:
+        - Key: Name
+          Value: !Ref Hostname
+        - Key: Project
+          Value: ORBIT
+        - Key: Environment
+          Value: simulation
+        - Key: Component
+          Value: bank-infrastructure
+        - Key: Asset_ID
+          Value: !Ref AssetID
+        - Key: Hostname
+          Value: !Ref Hostname
+        - Key: Technical_Role
+          Value: !Ref TechnicalRole
+
+Outputs:
+  InstanceId:
+    Description: EC2 instance ID
+    Value: !Ref Instance
+    Export:
+      Name: !Sub '${AWS::StackName}-InstanceId'
+  PrivateIp:
+    Description: Private IP
+    Value: !GetAtt Instance.PrivateIp
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateIp'
+  PublicIp:
+    Description: Public IP
+    Value: !GetAtt Instance.PublicIp
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicIp'
+  Hostname:
+    Description: Hostname
+    Value: !Ref Hostname
+    Export:
+      Name: !Sub '${AWS::StackName}-Hostname'

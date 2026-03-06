@@ -1,0 +1,22 @@
+---
+description: Minimal docs, minimal error handling, no hallucination—ask when unsure
+alwaysApply: true
+---
+
+# Project Coding Guidelines
+
+## 1. Documentation
+
+- **Do not create excessive documentation.** Create documentation only when it is required for your own context to complete the task (e.g., design notes, runbooks, or specs that you need to reference).
+- Avoid creating READMEs, design docs, or comment blocks unless explicitly requested or necessary for the work.
+
+## 2. Exception Handling, Error Handling, and Logging
+
+- Add **minimum** exception handling, error handling, and logging.
+- Include only what is **strictly necessary for debugging** the flow or transaction in question.
+- Prefer targeted try/catch and logs at decision points or failure points; avoid blanket logging or defensive code that does not aid debugging.
+
+## 3. When Unsure—Ask
+
+- **Do not hallucinate.** If something is not known, ambiguous, or outside the codebase, ask for clarification instead of guessing or inventing behavior, APIs, or requirements.
+- Prefer one clear question over assumed behavior.

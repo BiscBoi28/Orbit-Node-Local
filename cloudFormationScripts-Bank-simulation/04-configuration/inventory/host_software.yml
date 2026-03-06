@@ -1,0 +1,5 @@
+---
+host_software:
+  corebank-db-01: "postgresql15,postgresql15-server,java-11-openjdk,tomcat,nodejs,npm"
+  corebank-web-01: "nginx,php8.1,nodejs,npm"
+  corp-ad-01: "putty,winscp,nodejs,npm"
