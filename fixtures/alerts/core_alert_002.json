@@ -1,0 +1,22 @@
+{
+    "alert_id": "ALT-002",
+    "origin": "orbit-core",
+    "action_type": "patch_vulnerability",
+    "summary": "nginx buffer over-read on corebank-web-01",
+    "confidence": 0.78,
+    "recommended_ts": "",
+    "affected": {
+        "hosts": [
+            "corebank-web-01"
+        ],
+        "assets": [],
+        "services": []
+    },
+    "metadata": {
+        "affected_technology": "nginx",
+        "affected_version": "1.24",
+        "base_severity": "MEDIUM",
+        "cve_id": "CVE-2024-7347",
+        "title": "nginx mp4 module buffer over-read via specially crafted mp4 file"
+    }
+}

@@ -1,3 +1,10 @@
 aws_access_iiith
 .DS_Store
-.DS_Store
+
+# 3-layer architecture (AGENTS.md)
+.tmp/
+.env
+credentials.json
+token.json
+__pycache__/
+*.pyc

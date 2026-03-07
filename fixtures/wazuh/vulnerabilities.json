@@ -1,0 +1,38 @@
+[
+    {
+        "host_id": "corebank-db-01",
+        "cve_id": "CVE-2024-0985",
+        "cvss": 8.8,
+        "published": "2024-02-08",
+        "summary": "PostgreSQL non-owner REFRESH MATERIALIZED VIEW CONCURRENTLY executes arbitrary SQL",
+        "severity": "HIGH",
+        "source": "wazuh-stub"
+    },
+    {
+        "host_id": "corebank-db-01",
+        "cve_id": "CVE-2023-5868",
+        "cvss": 4.3,
+        "published": "2023-12-10",
+        "summary": "PostgreSQL memory disclosure in aggregate function calls",
+        "severity": "MEDIUM",
+        "source": "wazuh-stub"
+    },
+    {
+        "host_id": "corebank-web-01",
+        "cve_id": "CVE-2024-7347",
+        "cvss": 4.7,
+        "published": "2024-08-14",
+        "summary": "nginx mp4 module buffer over-read via specially crafted mp4 file",
+        "severity": "MEDIUM",
+        "source": "wazuh-stub"
+    },
+    {
+        "host_id": "corp-ad-01",
+        "cve_id": "CVE-2024-21351",
+        "cvss": 7.6,
+        "published": "2024-02-13",
+        "summary": "Windows SmartScreen Security Feature Bypass Vulnerability",
+        "severity": "HIGH",
+        "source": "wazuh-stub"
+    }
+]

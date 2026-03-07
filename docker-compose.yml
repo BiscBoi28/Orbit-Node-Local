@@ -1,0 +1,41 @@
+# ── ORBIT Node — Docker Compose ─────────────────────────────────────────────
+# Combines Neo4j, Presidio Analyzer, and the ORC service.
+#
+# Usage:
+#   docker compose up -d            # Start all services
+#   python -m app.seed              # Seed Neo4j (run once)
+#   uvicorn app.main:app --port 8000  # Start ORC (or use docker)
+# ────────────────────────────────────────────────────────────────────────────
+
+services:
+  neo4j:
+    image: neo4j:5-community
+    container_name: orbit-neo4j
+    ports:
+      - "7474:7474"   # Browser
+      - "7687:7687"   # Bolt
+    environment:
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:-changeme}
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  presidio-analyzer:
+    image: mcr.microsoft.com/presidio-analyzer:latest
+    container_name: orbit-presidio
+    ports:
+      - "5001:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  neo4j_data:

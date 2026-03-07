@@ -1,0 +1,22 @@
+{
+    "alert_id": "ALT-001",
+    "origin": "orbit-core",
+    "action_type": "patch_vulnerability",
+    "summary": "Critical PostgreSQL vulnerability on corebank-db-01",
+    "confidence": 0.92,
+    "recommended_ts": "",
+    "affected": {
+        "hosts": [
+            "corebank-db-01"
+        ],
+        "assets": [],
+        "services": []
+    },
+    "metadata": {
+        "affected_technology": "PostgreSQL",
+        "affected_version": "15.3",
+        "base_severity": "HIGH",
+        "cve_id": "CVE-2024-0985",
+        "title": "PostgreSQL non-owner REFRESH MATERIALIZED VIEW CONCURRENTLY executes arbitrary SQL"
+    }
+}

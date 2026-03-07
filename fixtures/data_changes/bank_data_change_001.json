@@ -1,0 +1,10 @@
+{
+    "event_type": "data_change",
+    "asset_id": "corebank-db-01",
+    "content_items": [
+        "Customer Name: Jane Doe, Email: jane.doe@corebank.com, Account: 021000021, Phone: 555-867-5309",
+        "Transfer: $50,000 from account 4716190207394368 to IBAN DE89370400440532013000, authorised by R. Smith",
+        "Audit log: User jsmith accessed customer records for SSN 123-45-6789 from IP 192.168.1.42",
+        "New account opened: Michael Chen, DOB 1985-03-15, Email: m.chen@example.com, Mobile: 202-555-0143"
+    ]
+}
