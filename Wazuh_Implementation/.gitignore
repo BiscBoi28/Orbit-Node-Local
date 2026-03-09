@@ -1,0 +1,10 @@
+.env
+credentials.json
+token.json
+.tmp/*
+!.tmp/.gitkeep
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.pyo

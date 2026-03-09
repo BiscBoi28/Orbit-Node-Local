@@ -1,8 +1,0 @@
-.env
-.env.*
-.venv/
-__pycache__/
-*.pyc
-.git/
-.tmp/
-docker-compose*.yml
