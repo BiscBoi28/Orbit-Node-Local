@@ -41,7 +41,7 @@ WITH h,
      (network_connectivity * 0.02) AS composite_risk_score
 RETURN h.hostname AS host_id,
        // Categorical features
-       h.os AS operating_system,
+       coalesce(h.os_name + ' ' + h.os_version, h.os_name, 'Unknown') AS operating_system,
        CASE 
            WHEN crown_jewel_count > 0 THEN 'high_value'
            WHEN avg_asset_sensitivity >= 0.7 THEN 'sensitive'
@@ -198,7 +198,7 @@ WITH h,
      max([scan_asset IN collect(d) | 
           duration.between(datetime(scan_asset.scan_ts), datetime()).days]) AS oldest_scan_age
 RETURN h.hostname AS host_id,
-       h.os AS operating_system,
+       coalesce(h.os_name + ' ' + h.os_version, h.os_name, 'Unknown') AS operating_system,
        assets_scanned_recently,
        current_vulnerabilities,
        recent_actioncards,
@@ -271,8 +271,8 @@ RETURN v.cve_id AS vulnerability_id,
        affected_assets,
        crown_jewel_exposure,
        round(max_threat_confidence * 100) / 100 AS max_threat_confidence,
-       CASE WHEN v.published_date IS NOT NULL 
-            THEN duration.between(date(datetime(v.published_date)), date()).days 
+       CASE WHEN v.published IS NOT NULL 
+            THEN duration.between(date(datetime(v.published)), date()).days 
             ELSE null END AS days_since_publication,
        // Target variable: Is this vulnerability being actively exploited?
        CASE WHEN exploitation_count > 0 THEN 1 ELSE 0 END AS is_exploited_binary,

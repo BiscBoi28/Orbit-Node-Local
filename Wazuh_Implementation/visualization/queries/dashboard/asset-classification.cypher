@@ -25,7 +25,7 @@ WITH h, count(d) AS asset_count,
      size([asset IN collect(d) WHERE asset.crown_jewel = true]) AS crown_jewel_count
 RETURN h.hostname AS hostname,
        h.ip AS host_ip,
-       h.os AS operating_system,
+       coalesce(h.os_name + ' ' + h.os_version, h.os_name, 'Unknown') AS operating_system,
        asset_count,
        round(avg_sensitivity * 100) / 100 AS average_sensitivity,
        crown_jewel_count

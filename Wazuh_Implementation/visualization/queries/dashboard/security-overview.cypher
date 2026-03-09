@@ -141,21 +141,23 @@ ORDER BY CASE ac.status
 END;
 
 -- Analyst Workload Distribution
-MATCH (an:Analyst)<-[:ASSIGNED_TO]-(ac:ActionCard)
-WITH an, count(ac) AS assigned_cards,
+MATCH (ac:ActionCard)
+WHERE ac.analyst_id IS NOT NULL
+WITH ac.analyst_id AS analyst_id,
+     count(ac) AS assigned_cards,
      collect(DISTINCT ac.status) AS card_statuses
-RETURN an.analyst_id AS analyst,
+RETURN analyst_id AS analyst,
        assigned_cards,
        card_statuses
 ORDER BY assigned_cards DESC;
 
 -- ActionCards by Priority (if metadata.priority exists)
 MATCH (ac:ActionCard)
-WHERE ac.metadata IS NOT NULL AND ac.metadata.priority IS NOT NULL
-RETURN ac.metadata.priority AS priority,
+WHERE ac.priority IS NOT NULL
+RETURN ac.priority AS priority,
        ac.status AS status,
        count(*) AS card_count
-ORDER BY CASE ac.metadata.priority
+ORDER BY CASE ac.priority
     WHEN 'critical' THEN 4
     WHEN 'high' THEN 3
     WHEN 'medium' THEN 2

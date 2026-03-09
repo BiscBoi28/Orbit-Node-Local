@@ -23,12 +23,8 @@ from typing import Dict, List
 from dotenv import load_dotenv
 from neo4j import GraphDatabase
 
-# Add parent paths for ORBIT ingestion functions
-sys.path.insert(0, "../../neo4j-local/execution/ingestion")
-sys.path.insert(0, "../../neo4j-local/execution/lifecycle")
-
-# Use direct Neo4j operations for simpler testing
-from neo4j import GraphDatabase
+# Advanced scenarios require neo4j-local — not available in this deployment
+# Only the basic scenario is functional
 
 load_dotenv("../../neo4j-local/.env")
 
@@ -493,7 +489,7 @@ class VisualizationDataGenerator:
                 "title": f"{vuln_type} Vulnerability",
                 "description": f"Sample {vuln_type.lower()} vulnerability for visualization testing",
                 "cvss": cvss,
-                "published_date": (datetime.now() - timedelta(days=random.randint(1, 365))).isoformat(),
+                "published": (datetime.now() - timedelta(days=random.randint(1, 365))).isoformat(),
                 "host_id": random.choice(hosts),
                 "source": "sample_generator"
             }

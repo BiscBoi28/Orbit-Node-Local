@@ -1,12 +1,21 @@
 #!/usr/bin/env python3
 """Simple NeoDash Test Verification Script"""
 
+import os
+
+from dotenv import load_dotenv
 from neo4j import GraphDatabase
+
+load_dotenv()
+
+NEO4J_URI = "bolt://localhost:7687"
+NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
 
 def verify_neodash_data():
     """Verify the current database state for NeoDash testing."""
     
-    driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "orbit_secure_pass"))
+    driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
     
     with driver.session() as session:
         print("🎯 NeoDash Testing - Current Database State")
@@ -44,7 +53,7 @@ def verify_neodash_data():
         print("📋 NeoDash Setup Instructions:")
         print("1. Open: https://neodash.graphapp.io")
         print("2. Connect to: bolt://localhost:7687")
-        print("3. Username: neo4j | Password: orbit_secure_pass") 
+        print("3. Username: neo4j | Password: (value of NEO4J_PASSWORD in .env)")
         print("4. Import dashboard: ../dashboards/orbit-security-dashboard.json")
         print("5. Enable auto-refresh (30s) to see live updates")
         

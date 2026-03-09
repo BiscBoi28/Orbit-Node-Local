@@ -345,7 +345,7 @@
         {
           "id": "analyst-workload",
           "title": "Analyst Workload Distribution",
-          "query": "MATCH (an:Analyst)<-[:ASSIGNED_TO]-(ac:ActionCard) WITH an, count(ac) AS assigned_cards, collect(DISTINCT ac.status) AS card_statuses RETURN an.analyst_id AS analyst, assigned_cards, card_statuses ORDER BY assigned_cards DESC",
+          "query": "MATCH (ac:ActionCard) WHERE ac.analyst_id IS NOT NULL WITH ac.analyst_id AS analyst_id, count(ac) AS assigned_cards, collect(DISTINCT ac.status) AS card_statuses RETURN analyst_id AS analyst, assigned_cards, card_statuses ORDER BY assigned_cards DESC",
           "width": 6,
           "height": 4,
           "x": 6,
@@ -359,7 +359,7 @@
         {
           "id": "actioncard-priority-matrix",
           "title": "ActionCard Priority vs Status Matrix",
-          "query": "MATCH (ac:ActionCard) WHERE ac.metadata IS NOT NULL AND ac.metadata.priority IS NOT NULL RETURN ac.metadata.priority AS priority, ac.status AS status, count(*) AS card_count",
+          "query": "MATCH (ac:ActionCard) WHERE ac.priority IS NOT NULL RETURN ac.priority AS priority, ac.status AS status, count(*) AS card_count",
           "width": 6,
           "height": 4,
           "x": 0,

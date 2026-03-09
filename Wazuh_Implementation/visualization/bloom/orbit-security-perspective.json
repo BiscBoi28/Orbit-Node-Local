@@ -70,7 +70,7 @@
       "icon": "warning",
       "labelPosition": "bottom",
       "properties": {
-        "visible": ["cve_id", "title", "cvss", "published_date"],
+        "visible": ["cve_id", "title", "cvss", "published"],
         "searchable": ["cve_id", "title"],
         "indexed": ["cvss"]
       },

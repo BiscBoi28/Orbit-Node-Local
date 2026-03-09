@@ -140,7 +140,7 @@ WITH h, vulnerable_components, threatening_actors, highest_cvss, avg_threat_conf
      avg([asset IN collect(d) | asset.sensitivity_score]) AS avg_asset_sensitivity
 RETURN h.hostname AS hostname,
        h.ip AS host_ip,
-       h.os AS operating_system,
+       coalesce(h.os_name + ' ' + h.os_version, h.os_name, 'Unknown') AS operating_system,
        vulnerable_components,
        threatening_actors,
        round(highest_cvss * 10) / 10 AS highest_cvss,

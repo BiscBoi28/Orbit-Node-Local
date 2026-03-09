@@ -18,7 +18,7 @@ WITH h, hosted_assets, network_connections, crown_jewel_count, avg_asset_sensiti
      (hosted_assets * 2) + network_connections + (crown_jewel_count * 5) AS centrality_score
 RETURN h.hostname AS host,
        h.ip AS ip_address,
-       h.os AS operating_system,
+       coalesce(h.os_name + ' ' + h.os_version, h.os_name, 'Unknown') AS operating_system,
        hosted_assets,
        network_connections,
        crown_jewel_count,

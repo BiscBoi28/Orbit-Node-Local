@@ -179,7 +179,7 @@ WITH h, scanned_assets, avg_scan_age, scan_timespan,
      count(d) AS crown_jewel_count
 WHERE crown_jewel_count > 0
 RETURN h.hostname AS host,
-       h.os AS operating_system,
+       coalesce(h.os_name + ' ' + h.os_version, h.os_name, 'Unknown') AS operating_system,
        scanned_assets,
        crown_jewel_count,
        round(avg_scan_age) AS avg_scan_age_days,

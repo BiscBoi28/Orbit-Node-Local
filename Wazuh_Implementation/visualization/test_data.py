@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """Quick test script to verify sample data."""
 
-import sys
 import os
-sys.path.insert(0, "../neo4j-local")
-
-from neo4j import GraphDatabase
 from dotenv import load_dotenv
+from neo4j import GraphDatabase
 
-load_dotenv("../neo4j-local/.env")
+load_dotenv()
+
+NEO4J_URI = "bolt://localhost:7687"
+NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
 
 def test_sample_data():
-    driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "orbit_secure_pass"))
+    driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
     
     with driver.session() as session:
         # Test basic counts
