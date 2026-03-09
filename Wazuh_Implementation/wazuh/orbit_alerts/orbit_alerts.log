@@ -1,1 +1,1 @@
-
+{"action_type": "patch_vulnerability", "affected_host": "wazuh-agent-001", "affected_hostname": "simulated-bank-host-01", "confidence": 0.95, "orbit_action_id": "ORBIT-AC-008", "orbit_source": "ORBIT", "orbit_type": "actioncard_pending", "origin": "orbit-core", "priority": "MEDIUM", "status": "pending", "summary": "ORBIT patch recommendation for simulated-bank-host-01", "timestamp": "2026-03-09T19:26:18.426509+00:00", "wazuh_alert_ref": "orbit-alert::ORBIT-AC-008", "wazuh_api_url": "https://wazuh.manager:55000"}

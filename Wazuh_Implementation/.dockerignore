@@ -6,3 +6,6 @@ __pycache__/
 .git/
 .tmp/
 docker-compose*.yml
+wazuh/*
+!wazuh/fixtures/
+!wazuh/fixtures/**

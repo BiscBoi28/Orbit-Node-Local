@@ -57,6 +57,7 @@ services:
         condition: service_healthy
     volumes:
       - ./wazuh/orbit_alerts:/orbit-alerts
+      - ./wazuh/active-response:/orbit-ar
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -116,6 +117,7 @@ services:
       - wazuh-manager-data:/var/ossec/data
       - wazuh-manager-logs:/var/ossec/logs
       - wazuh-manager-queue:/var/ossec/queue
+      - ./wazuh/orbit_alerts:/orbit-alerts
       - ./wazuh/config/ossec.conf:/wazuh-config-mount/etc/ossec.conf:ro
       - ./wazuh/rules:/var/ossec/etc/rules/local_rules
       - ./wazuh/active-response:/var/ossec/active-response/bin

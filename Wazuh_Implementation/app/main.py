@@ -18,7 +18,7 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from app.config import LOG_LEVEL
@@ -51,6 +51,16 @@ from app.priority import (
     is_crown_jewel,
     compute_action_priority,
 )
+from app.wazuh.webhook import router as wazuh_webhook_router
+from app.wazuh.alert_injector import inject_actioncard_as_alert
+from app.wazuh.active_response import (
+    get_primary_affected_host,
+    is_wazuh_managed_host,
+    simulate_execution,
+    trigger_active_response,
+)
+from app.wazuh.wazuh_client import get_wazuh_client
+from app.wazuh.inventory_sync import get_sync_status, sync_full_inventory
 
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL, logging.INFO),
@@ -107,6 +117,7 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+app.include_router(wazuh_webhook_router)
 
 
 # ── Health ──────────────────────────────────────────────────────────────────
@@ -272,12 +283,48 @@ def ingest_core_alert(alert: CoreAlert):
                 "computed_priority": priority,
             }
 
+    status = get_actioncard_status(driver, alert.alert_id)
+    wazuh_alert_ref = None
+    if status == "pending":
+        target_host_id = enrichment.get("host_id")
+        if not target_host_id and host_ids:
+            target_host_id = host_ids[0]
+
+        affected_host = lookup_host(target_host_id) if target_host_id else None
+        if not affected_host:
+            affected_host = {
+                "host_id": target_host_id or "",
+                "hostname": target_host_id or "",
+            }
+
+        actioncard_for_wazuh = {
+            "action_id": action_id,
+            "status": status,
+            "priority": priority,
+            "origin": alert.origin,
+            "action_type": alert.action_type,
+            "summary": alert.summary,
+            "confidence": alert.confidence,
+            "metadata": alert.metadata,
+            "affected": alert.affected,
+        }
+
+        try:
+            wazuh_alert_ref = inject_actioncard_as_alert(
+                get_wazuh_client(),
+                actioncard_for_wazuh,
+                affected_host,
+            )
+        except Exception as e:
+            raise HTTPException(500, detail=f"Wazuh alert injection failed: {e}")
+
     result = {
         "action_id": alert.alert_id,
-        "status": get_actioncard_status(driver, alert.alert_id),
+        "status": status,
         "priority": priority,
         "summary": alert.summary,
         "enrichment": enrichment,
+        "wazuh_alert_ref": wazuh_alert_ref,
     }
     logger.info("Core alert processed: %s → priority=%s", alert.alert_id, priority)
     return result
@@ -309,6 +356,30 @@ def ingest_wazuh_vuln(payload: dict):
         raise HTTPException(422, detail=str(e))
     except Exception as e:
         raise HTTPException(400, detail=str(e))
+
+
+# ── Wazuh Pull Sync ─────────────────────────────────────────────────────────
+
+@app.get("/wazuh/agents")
+def list_wazuh_agents():
+    try:
+        return get_wazuh_client().get_agents()
+    except Exception as e:
+        raise HTTPException(502, detail=f"Wazuh agent fetch failed: {e}")
+
+
+@app.post("/admin/sync")
+def admin_sync():
+    driver = get_driver()
+    try:
+        return sync_full_inventory(driver, get_wazuh_client())
+    except Exception as e:
+        raise HTTPException(500, detail=f"Wazuh sync failed: {e}")
+
+
+@app.get("/admin/sync/status")
+def admin_sync_status():
+    return get_sync_status()
 
 
 # ── Query Endpoints ─────────────────────────────────────────────────────────
@@ -371,11 +442,19 @@ def lifecycle_assign(action_id: str, body: LifecycleAction):
 
 
 @app.post("/lifecycle/{action_id}/approve")
-def lifecycle_approve(action_id: str, body: LifecycleAction):
+def lifecycle_approve(action_id: str, body: LifecycleAction, background_tasks: BackgroundTasks):
     driver = get_driver()
     try:
         approve_action(driver, action_id, body.analyst_id, body.comment)
-        return {"action_id": action_id, "status": "approved"}
+
+        affected_host = get_primary_affected_host(action_id)
+        host_id = affected_host.get("host_id", "") if affected_host else ""
+        if is_wazuh_managed_host(host_id):
+            background_tasks.add_task(trigger_active_response, action_id, body.analyst_id)
+        else:
+            background_tasks.add_task(simulate_execution, action_id, 3)
+
+        return {"action_id": action_id, "status": "approved", "execution": "triggered"}
     except Exception as e:
         raise HTTPException(400, detail=str(e))
 

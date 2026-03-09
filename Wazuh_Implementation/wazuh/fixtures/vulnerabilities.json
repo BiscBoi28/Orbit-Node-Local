@@ -1,0 +1,108 @@
+{
+  "001": {
+    "data": {
+      "affected_items": [
+        {
+          "severity": "High",
+          "updated": "2023-10-10",
+          "version": "1.18.0-6ubuntu14.4",
+          "type": "PACKAGE",
+          "name": "nginx",
+          "external_references": [
+            "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-44487",
+            "https://nvd.nist.gov/vuln/detail/CVE-2023-44487",
+            "https://ubuntu.com/security/CVE-2023-44487"
+          ],
+          "condition": "Package less than 1.25.3",
+          "detection_time": "2026-03-09T18:00:00Z",
+          "cvss3_score": 7.5,
+          "published": "2023-10-10",
+          "architecture": "amd64",
+          "cve": "CVE-2023-44487",
+          "status": "VALID",
+          "title": "CVE-2023-44487 affects nginx",
+          "cvss2_score": 7.5
+        },
+        {
+          "severity": "Critical",
+          "updated": "2024-03-29",
+          "version": "5.6.0",
+          "type": "PACKAGE",
+          "name": "xz-utils",
+          "external_references": [
+            "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-3094",
+            "https://nvd.nist.gov/vuln/detail/CVE-2024-3094",
+            "https://www.openwall.com/lists/oss-security/2024/03/29/4"
+          ],
+          "condition": "Package equal to 5.6.0",
+          "detection_time": "2026-03-09T18:00:00Z",
+          "cvss3_score": 10.0,
+          "published": "2024-03-29",
+          "architecture": "amd64",
+          "cve": "CVE-2024-3094",
+          "status": "VALID",
+          "title": "CVE-2024-3094 affects xz-utils",
+          "cvss2_score": 10.0
+        }
+      ],
+      "total_affected_items": 2,
+      "total_failed_items": 0,
+      "failed_items": []
+    },
+    "message": "All selected vulnerabilities were returned",
+    "error": 0
+  },
+  "002": {
+    "data": {
+      "affected_items": [
+        {
+          "severity": "High",
+          "updated": "2023-10-10",
+          "version": "1.52.0-1ubuntu0.1",
+          "type": "PACKAGE",
+          "name": "libnghttp2-14",
+          "external_references": [
+            "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-44487",
+            "https://nvd.nist.gov/vuln/detail/CVE-2023-44487",
+            "https://ubuntu.com/security/CVE-2023-44487"
+          ],
+          "condition": "Package less than 1.57.0",
+          "detection_time": "2026-03-09T18:00:03Z",
+          "cvss3_score": 7.5,
+          "published": "2023-10-10",
+          "architecture": "amd64",
+          "cve": "CVE-2023-44487",
+          "status": "VALID",
+          "title": "CVE-2023-44487 affects libnghttp2-14",
+          "cvss2_score": 7.5
+        },
+        {
+          "severity": "Critical",
+          "updated": "2024-03-29",
+          "version": "5.6.0",
+          "type": "PACKAGE",
+          "name": "liblzma5",
+          "external_references": [
+            "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-3094",
+            "https://nvd.nist.gov/vuln/detail/CVE-2024-3094",
+            "https://www.openwall.com/lists/oss-security/2024/03/29/4"
+          ],
+          "condition": "Package equal to 5.6.0",
+          "detection_time": "2026-03-09T18:00:03Z",
+          "cvss3_score": 10.0,
+          "published": "2024-03-29",
+          "architecture": "amd64",
+          "cve": "CVE-2024-3094",
+          "status": "VALID",
+          "title": "CVE-2024-3094 affects liblzma5",
+          "cvss2_score": 10.0
+        }
+      ],
+      "total_affected_items": 2,
+      "total_failed_items": 0,
+      "failed_items": []
+    },
+    "message": "All selected vulnerabilities were returned",
+    "error": 0
+  }
+}

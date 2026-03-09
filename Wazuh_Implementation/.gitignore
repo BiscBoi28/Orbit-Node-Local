@@ -8,3 +8,6 @@ __pycache__/
 .pytest_cache/
 *.pyc
 *.pyo
+wazuh/orbit_alerts/orbit_alerts.log
+wazuh/active-response/orbit_ar.log
+wazuh/config/certs/

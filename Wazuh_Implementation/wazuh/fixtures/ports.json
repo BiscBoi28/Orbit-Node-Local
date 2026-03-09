@@ -1,0 +1,77 @@
+{
+  "data": {
+    "affected_items": [
+      {
+        "local": {
+          "ip": "0.0.0.0",
+          "port": 443
+        },
+        "remote": {
+          "ip": "0.0.0.0",
+          "port": 0
+        },
+        "scan": {
+          "id": 0,
+          "time": "2026-03-09T17:44:26+00:00"
+        },
+        "rx_queue": 0,
+        "protocol": "tcp",
+        "state": "listening",
+        "process": "nginx",
+        "tx_queue": 0,
+        "inode": 1001524,
+        "pid": 1245,
+        "agent_id": "001"
+      },
+      {
+        "local": {
+          "ip": "127.0.0.1",
+          "port": 5432
+        },
+        "remote": {
+          "ip": "0.0.0.0",
+          "port": 0
+        },
+        "scan": {
+          "id": 0,
+          "time": "2026-03-09T17:44:26+00:00"
+        },
+        "rx_queue": 0,
+        "protocol": "tcp",
+        "state": "listening",
+        "process": "postgres",
+        "tx_queue": 0,
+        "inode": 1001525,
+        "pid": 2148,
+        "agent_id": "001"
+      },
+      {
+        "local": {
+          "ip": "0.0.0.0",
+          "port": 22
+        },
+        "remote": {
+          "ip": "0.0.0.0",
+          "port": 0
+        },
+        "scan": {
+          "id": 0,
+          "time": "2026-03-09T17:44:26+00:00"
+        },
+        "rx_queue": 0,
+        "protocol": "tcp",
+        "state": "listening",
+        "process": "sshd",
+        "tx_queue": 0,
+        "inode": 1001526,
+        "pid": 1032,
+        "agent_id": "001"
+      }
+    ],
+    "total_affected_items": 3,
+    "total_failed_items": 0,
+    "failed_items": []
+  },
+  "message": "All specified syscollector information was returned",
+  "error": 0
+}

@@ -19,6 +19,7 @@ COPY Neo4j/ ./Neo4j/
 
 # Copy fixture data (needed by the seed script)
 COPY fixtures/ ./fixtures/
+COPY wazuh/fixtures/ ./wazuh/fixtures/
 
 # Tell Docker this container listens on port 8000
 EXPOSE 8000

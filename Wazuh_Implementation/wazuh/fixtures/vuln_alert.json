@@ -1,0 +1,65 @@
+{
+  "timestamp": "2026-03-09T18:03:44.817+0000",
+  "rule": {
+    "level": 13,
+    "description": "CVE-2024-3094 affects xz-utils",
+    "id": "23506",
+    "firedtimes": 1,
+    "mail": false,
+    "groups": [
+      "vulnerability-detector",
+      "gdpr_IV_35.7.d",
+      "pci_dss_11.2.1",
+      "pci_dss_11.2.3",
+      "tsc_CC7.1",
+      "tsc_CC7.2"
+    ]
+  },
+  "agent": {
+    "id": "001",
+    "name": "simulated-bank-host-01",
+    "ip": "172.22.0.7"
+  },
+  "manager": {
+    "name": "wazuh.manager"
+  },
+  "id": "1773079424.2011",
+  "decoder": {
+    "name": "json"
+  },
+  "data": {
+    "vulnerability": {
+      "package": {
+        "condition": "Package equal to 5.6.0",
+        "architecture": "amd64",
+        "name": "xz-utils",
+        "version": "5.6.0"
+      },
+      "severity": "Critical",
+      "cvss": {
+        "cvss2": {
+          "base_score": "10.0"
+        },
+        "cvss3": {
+          "base_score": "10.0",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"
+        }
+      },
+      "status": "Active",
+      "title": "XZ Utils backdoor allows remote code execution",
+      "publication_time": "2024-03-29T00:00:00Z",
+      "rationale": "The xz-utils package contains the backdoored liblzma code path described in CVE-2024-3094.",
+      "cve": "CVE-2024-3094",
+      "type": "Packages",
+      "assigned": "2024-03-29T00:00:00Z",
+      "reference": "https://nvd.nist.gov/vuln/detail/CVE-2024-3094",
+      "enumeration": "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-3094",
+      "scanner": {
+        "reference": "https://github.com/pyupio/safety-db/blob/master/data/insecure_full.json",
+        "condition": "Package equal to 5.6.0"
+      },
+      "classification": "CVSS"
+    }
+  },
+  "location": "vulnerability-detector"
+}

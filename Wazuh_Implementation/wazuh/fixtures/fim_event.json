@@ -1,0 +1,68 @@
+{
+  "timestamp": "2026-03-09T18:02:11.221+0000",
+  "rule": {
+    "level": 7,
+    "description": "Integrity checksum changed.",
+    "id": "550",
+    "firedtimes": 1,
+    "mail": false,
+    "groups": [
+      "syscheck",
+      "syscheck_entry_modified",
+      "syscheck_file",
+      "pci_dss_11.5",
+      "gpg13_4.11",
+      "gdpr_II_5.1.f",
+      "hipaa_164.312.c.1",
+      "hipaa_164.312.c.2",
+      "nist_800_53_SI.7",
+      "tsc_PI1.4",
+      "tsc_PI1.5",
+      "tsc_CC6.1",
+      "tsc_CC6.8",
+      "tsc_CC7.2",
+      "tsc_CC7.3"
+    ]
+  },
+  "agent": {
+    "id": "001",
+    "name": "simulated-bank-host-01",
+    "ip": "172.22.0.7"
+  },
+  "manager": {
+    "name": "wazuh.manager"
+  },
+  "id": "1773079331.2010",
+  "full_log": "File '/etc/passwd' modified. Integrity checksum changed.",
+  "decoder": {
+    "name": "syscheck_integrity_changed"
+  },
+  "syscheck": {
+    "path": "/etc/passwd",
+    "size_before": "1823",
+    "size_after": "1890",
+    "perm_before": "rw-r--r--",
+    "perm_after": "rw-r--r--",
+    "uid_after": "0",
+    "gid_after": "0",
+    "md5_before": "a3b5db5f7d0f0f95e7c2c6c4bbd1a100",
+    "md5_after": "b5cf4e336af3ac4e92a64f8a6078059c",
+    "sha1_before": "9e6438c0df6f6d4aa1a76f4f4e5a243e8d9bc2d3",
+    "sha1_after": "b70d8a9bc1fb8e5fb93fd76cb9cb5d4ef30d3fc2",
+    "sha256_before": "59c6d4e9504e17c7a7efdc332f6145db0bf80a9b89bfbbfdddb8b27c12075b2b",
+    "sha256_after": "6fa4d9ab6947fd9506efc9e6c53d239f53f64c46f225f35bfb0e1cb6e2edcb9a",
+    "uname_after": "root",
+    "gname_after": "root",
+    "mtime_before": "2026-03-09T17:57:54",
+    "mtime_after": "2026-03-09T18:02:09",
+    "changed_attributes": [
+      "size",
+      "md5",
+      "sha1",
+      "sha256",
+      "mtime"
+    ],
+    "event": "modified"
+  },
+  "location": "syscheck"
+}

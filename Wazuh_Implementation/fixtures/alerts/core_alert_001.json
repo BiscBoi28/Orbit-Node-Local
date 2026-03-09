@@ -1,0 +1,18 @@
+{
+  "alert_id": "ORBIT-AC-008",
+  "origin": "orbit-core",
+  "action_type": "patch_vulnerability",
+  "summary": "ORBIT patch recommendation for simulated-bank-host-01",
+  "confidence": 0.95,
+  "recommended_ts": "2026-03-09T19:00:00+00:00",
+  "affected": {
+    "hosts": [
+      "wazuh-agent-001"
+    ]
+  },
+  "metadata": {
+    "base_severity": "CRITICAL",
+    "cve_id": "CVE-2024-3094",
+    "source": "phase-4-fixture"
+  }
+}

@@ -1,0 +1,131 @@
+{
+  "data": {
+    "affected_items": [
+      {
+        "scan": {
+          "id": 0,
+          "time": "2026-03-09T17:44:26+00:00"
+        },
+        "priority": "optional",
+        "install_time": " ",
+        "location": " ",
+        "section": "httpd",
+        "description": "small, powerful, scalable web/proxy server",
+        "version": "1.18.0-6ubuntu14.4",
+        "multiarch": "foreign",
+        "size": 1156,
+        "vendor": "Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>",
+        "source": "nginx",
+        "format": "deb",
+        "architecture": "amd64",
+        "name": "nginx",
+        "agent_id": "001"
+      },
+      {
+        "scan": {
+          "id": 0,
+          "time": "2026-03-09T17:44:26+00:00"
+        },
+        "priority": "important",
+        "install_time": " ",
+        "location": " ",
+        "section": "libs",
+        "description": "Secure Sockets Layer toolkit - cryptographic utility",
+        "version": "3.0.2-0ubuntu1.20",
+        "multiarch": "foreign",
+        "size": 1265,
+        "vendor": "Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>",
+        "source": "openssl",
+        "format": "deb",
+        "architecture": "amd64",
+        "name": "openssl",
+        "agent_id": "001"
+      },
+      {
+        "scan": {
+          "id": 0,
+          "time": "2026-03-09T17:44:27+00:00"
+        },
+        "priority": "optional",
+        "install_time": " ",
+        "location": " ",
+        "section": "libs",
+        "description": "library implementing HTTP/2 protocol",
+        "version": "1.52.0-1ubuntu0.1",
+        "multiarch": "same",
+        "size": 228,
+        "vendor": "Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>",
+        "source": "nghttp2",
+        "format": "deb",
+        "architecture": "amd64",
+        "name": "libnghttp2-14",
+        "agent_id": "001"
+      },
+      {
+        "scan": {
+          "id": 0,
+          "time": "2026-03-09T17:44:27+00:00"
+        },
+        "priority": "required",
+        "install_time": " ",
+        "location": " ",
+        "section": "utils",
+        "description": "XZ-format compression utilities",
+        "version": "5.6.0",
+        "multiarch": "foreign",
+        "size": 228,
+        "vendor": "Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>",
+        "source": "xz-utils",
+        "format": "deb",
+        "architecture": "amd64",
+        "name": "xz-utils",
+        "agent_id": "001"
+      },
+      {
+        "scan": {
+          "id": 0,
+          "time": "2026-03-09T17:44:27+00:00"
+        },
+        "priority": "optional",
+        "install_time": " ",
+        "location": " ",
+        "section": "database",
+        "description": "PostgreSQL database-cluster manager",
+        "version": "248ubuntu0.24.04.1",
+        "multiarch": "foreign",
+        "size": 119,
+        "vendor": "Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>",
+        "source": "postgresql-common",
+        "format": "deb",
+        "architecture": "all",
+        "name": "postgresql-client-common",
+        "agent_id": "001"
+      },
+      {
+        "scan": {
+          "id": 0,
+          "time": "2026-03-09T17:44:27+00:00"
+        },
+        "priority": "required",
+        "install_time": " ",
+        "location": " ",
+        "section": "shells",
+        "description": "GNU Bourne Again SHell",
+        "version": "5.1-6ubuntu1.1",
+        "multiarch": "foreign",
+        "size": 1864,
+        "vendor": "Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>",
+        "source": " ",
+        "format": "deb",
+        "architecture": "amd64",
+        "name": "bash",
+        "agent_id": "001"
+      }
+    ],
+    "total_affected_items": 6,
+    "total_failed_items": 0,
+    "failed_items": []
+  },
+  "message": "All specified syscollector information was returned",
+  "error": 0
+}
