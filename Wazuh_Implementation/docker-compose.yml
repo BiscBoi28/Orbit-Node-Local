@@ -1,15 +1,14 @@
 # docker-compose.yml
-# Starts all ORBIT Node services: Neo4j, Presidio, and ORC
+# Starts the ORBIT node stack with Neo4j, Presidio, ORC, and Wazuh.
 
 services:
-
   neo4j:
     image: neo4j:5.18-community
     container_name: orbit-neo4j
     restart: unless-stopped
     ports:
-      - "7474:7474"   # Neo4j Browser (open in web browser to view graph)
-      - "7687:7687"   # Bolt connection (used by ORC app internally)
+      - "7474:7474"
+      - "7687:7687"
     environment:
       - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD}
       - NEO4J_PLUGINS=["apoc"]
@@ -24,14 +23,14 @@ services:
       retries: 5
       start_period: 60s
     networks:
-      - orbit-net
+      - orbit-network
 
   presidio:
     image: mcr.microsoft.com/presidio-analyzer:latest
     container_name: orbit-presidio
     restart: unless-stopped
     ports:
-      - "5001:3000"   # Presidio API (3000 inside container, exposed as 5001)
+      - "5001:3000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
@@ -39,7 +38,7 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - orbit-net
+      - orbit-network
 
   orc:
     build:
@@ -48,7 +47,7 @@ services:
     container_name: orbit-orc
     restart: unless-stopped
     ports:
-      - "8000:8000"   # ORC API
+      - "8000:8000"
     env_file:
       - .env
     depends_on:
@@ -56,6 +55,8 @@ services:
         condition: service_healthy
       presidio:
         condition: service_healthy
+    volumes:
+      - ./wazuh/orbit_alerts:/orbit-alerts
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -63,12 +64,143 @@ services:
       retries: 5
       start_period: 90s
     networks:
-      - orbit-net
+      - orbit-network
+
+  wazuh.indexer:
+    image: wazuh/wazuh-indexer:4.7.0
+    container_name: wazuh-indexer
+    hostname: wazuh.indexer
+    restart: unless-stopped
+    ports:
+      - "9200:9200"
+    environment:
+      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=SecretPassword
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - wazuh-indexer-data:/var/lib/wazuh-indexer
+      - ./wazuh/config/wazuh_indexer.yml:/usr/share/wazuh-indexer/opensearch.yml:ro
+      - ./wazuh/config/certs:/usr/share/wazuh-indexer/certs:ro
+      - ./wazuh/config/internal_users.yml:/usr/share/wazuh-indexer/opensearch-security/internal_users.yml:ro
+    healthcheck:
+      test: ["CMD-SHELL", "bash -lc 'exec 3<>/dev/tcp/127.0.0.1/9200'"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+    networks:
+      - orbit-network
+
+  wazuh.manager:
+    image: wazuh/wazuh-manager:4.7.0
+    container_name: wazuh-manager
+    hostname: wazuh.manager
+    restart: unless-stopped
+    ports:
+      - "1514:1514/udp"
+      - "1515:1515"
+      - "514:514/udp"
+      - "55000:55000"
+    environment:
+      - INDEXER_URL=https://wazuh.indexer:9200
+      - INDEXER_USERNAME=admin
+      - INDEXER_PASSWORD=SecretPassword
+      - FILEBEAT_SSL_VERIFICATION_MODE=full
+    volumes:
+      - wazuh-manager-data:/var/ossec/data
+      - wazuh-manager-logs:/var/ossec/logs
+      - wazuh-manager-queue:/var/ossec/queue
+      - ./wazuh/config/ossec.conf:/wazuh-config-mount/etc/ossec.conf:ro
+      - ./wazuh/rules:/var/ossec/etc/rules/local_rules
+      - ./wazuh/active-response:/var/ossec/active-response/bin
+      - ./wazuh/integrations:/var/ossec/integrations
+      - ./wazuh/config/shared:/var/ossec/etc/shared
+      - ./wazuh/config/certs:/etc/ssl/wazuh:ro
+    depends_on:
+      wazuh.indexer:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sk -u wazuh-wui:wazuh-wui https://localhost:55000/ | grep -q 'title'"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
+    networks:
+      - orbit-network
+
+  wazuh.dashboard:
+    image: wazuh/wazuh-dashboard:4.7.0
+    container_name: wazuh-dashboard
+    hostname: wazuh.dashboard
+    restart: unless-stopped
+    ports:
+      - "5601:5601"
+    environment:
+      - INDEXER_USERNAME=admin
+      - INDEXER_PASSWORD=SecretPassword
+      - WAZUH_API_URL=https://wazuh.manager
+      - DASHBOARD_USERNAME=kibanaserver
+      - DASHBOARD_PASSWORD=kibanaserver
+    volumes:
+      - ./wazuh/config/wazuh_dashboard.yml:/usr/share/wazuh-dashboard/config/opensearch_dashboards.yml:ro
+      - ./wazuh/config/certs:/usr/share/wazuh-dashboard/certs:ro
+    depends_on:
+      wazuh.indexer:
+        condition: service_healthy
+      wazuh.manager:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -lc 'exec 3<>/dev/tcp/127.0.0.1/5601'"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
+    networks:
+      - orbit-network
+
+  wazuh.agent:
+    build:
+      context: ./wazuh/agent
+      dockerfile: Dockerfile.agent
+    container_name: wazuh-agent
+    hostname: simulated-bank-host-01
+    restart: unless-stopped
+    environment:
+      - WAZUH_MANAGER=wazuh.manager
+      - WAZUH_AGENT_NAME=simulated-bank-host-01
+      - WAZUH_AGENT_GROUP=bank-hosts
+    volumes:
+      - ./wazuh/agent/ossec.conf:/var/ossec/etc/ossec.conf
+      - ./wazuh/active-response:/var/ossec/active-response/bin
+    depends_on:
+      wazuh.manager:
+        condition: service_healthy
+    cap_add:
+      - NET_ADMIN
+    healthcheck:
+      test: ["CMD-SHELL", "test -s /var/ossec/etc/client.keys && pgrep -f wazuh-agentd >/dev/null"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 150s
+    networks:
+      - orbit-network
 
 volumes:
   neo4j_data:
   neo4j_logs:
+  wazuh-indexer-data:
+  wazuh-manager-data:
+  wazuh-manager-logs:
+  wazuh-manager-queue:
 
 networks:
-  orbit-net:
+  orbit-network:
+    name: orbit-network
     driver: bridge

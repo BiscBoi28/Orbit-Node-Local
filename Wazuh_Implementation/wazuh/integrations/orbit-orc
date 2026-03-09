@@ -1,0 +1,17 @@
+#!/bin/sh
+set -eu
+
+ALERT_FILE="${1:-}"
+HOOK_URL="${2:-http://orc:8000/webhook/wazuh-event}"
+
+if [ -z "${ALERT_FILE}" ] || [ ! -f "${ALERT_FILE}" ]; then
+  exit 0
+fi
+
+if command -v curl >/dev/null 2>&1; then
+  curl -sS -m 10 -H "Content-Type: application/json" \
+    --data @"${ALERT_FILE}" \
+    "${HOOK_URL}" >/dev/null || true
+fi
+
+exit 0
