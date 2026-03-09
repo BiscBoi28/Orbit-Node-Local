@@ -15,6 +15,7 @@ import hashlib
 import json
 import logging
 import uuid
+from collections import Counter
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
@@ -404,6 +405,30 @@ def delta_compute(last_synced_ts: str = "2000-01-01T00:00:00Z"):
         payload = compute_delta(driver, last_synced_ts)
         delta_id = export_delta(driver, payload)
         return {"delta_id": delta_id, "changes_count": len(payload["changes"])}
+    except Exception as e:
+        raise HTTPException(500, detail=str(e))
+
+
+@app.post("/delta/trigger")
+def delta_trigger():
+    """Compute and export a delta since the last completed inventory sync."""
+
+    driver = get_driver()
+    sync_status = get_sync_status()
+    last_synced_ts = sync_status.get("last_sync_ts") or "2000-01-01T00:00:00Z"
+
+    try:
+        payload = compute_delta(driver, last_synced_ts)
+        delta_id = export_delta(driver, payload)
+        changes = payload.get("changes", [])
+        changes_by_type = dict(Counter(change.get("entity_type", "Unknown") for change in changes))
+        return {
+            "delta_id": delta_id,
+            "generated_ts": payload.get("generated_ts"),
+            "last_synced_ts": last_synced_ts,
+            "changes_count": len(changes),
+            "changes_by_type": changes_by_type,
+        }
     except Exception as e:
         raise HTTPException(500, detail=str(e))
 
