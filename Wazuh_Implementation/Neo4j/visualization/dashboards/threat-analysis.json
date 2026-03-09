@@ -1,0 +1,340 @@
+{
+  "title": "ORBIT Threat Intelligence Dashboard",
+  "version": "2.4.0",
+  "settings": {
+    "pagenumber": 0,
+    "editable": true,
+    "fullscreenEnabled": false,
+    "parameters": {
+      "threat_severity": "CRITICAL",
+      "cvss_threshold": 7.0
+    }
+  },
+  "pages": [
+    {
+      "title": "Threat Landscape",
+      "reports": [
+        {
+          "id": "total-threats-metric",
+          "title": "Active Threats",
+          "query": "MATCH (t:Threat) RETURN count(t) AS total_threats",
+          "width": 3,
+          "height": 3,
+          "x": 0,
+          "y": 0,
+          "type": "value",
+          "selection": {},
+          "settings": {
+            "format": "0,0",
+            "suffix": " threats",
+            "textColor": "#e74c3c"
+          }
+        },
+        {
+          "id": "critical-threats-metric",
+          "title": "Critical Threats",
+          "query": "MATCH (t:Threat {severity: 'CRITICAL'}) RETURN count(t) AS critical_threats",
+          "width": 3,
+          "height": 3,
+          "x": 3,
+          "y": 0,
+          "type": "value",
+          "selection": {},
+          "settings": {
+            "format": "0,0",
+            "suffix": " critical",
+            "textColor": "#8e44ad"
+          }
+        },
+        {
+          "id": "exploited-vulnerabilities",
+          "title": "High-Risk Vulnerabilities",
+          "query": "MATCH (v:Vulnerability) WHERE v.cvss >= 7.0 RETURN count(v) AS high_risk_vulns",
+          "width": 3,
+          "height": 3,
+          "x": 6,
+          "y": 0,
+          "type": "value",
+          "selection": {},
+          "settings": {
+            "format": "0,0",
+            "suffix": " CVEs",
+            "textColor": "#e67e22"
+          }
+        },
+        {
+          "id": "threatened-hosts",
+          "title": "Vulnerable Hosts",
+          "query": "MATCH (h:Host)-[:HAS_VULNERABILITY]->(v:Vulnerability) WHERE v.cvss >= 7.0 RETURN count(DISTINCT h) AS vulnerable_hosts",
+          "width": 3,
+          "height": 3,
+          "x": 9,
+          "y": 0,
+          "type": "value",
+          "selection": {},
+          "settings": {
+            "format": "0,0",
+            "suffix": " hosts",
+            "textColor": "#3498db"
+          }
+        },
+        {
+          "id": "threat-severity-breakdown",
+          "title": "Threat Severity Distribution",
+          "query": "MATCH (t:Threat) RETURN t.severity AS severity, count(*) AS threat_count ORDER BY CASE t.severity WHEN 'CRITICAL' THEN 4 WHEN 'HIGH' THEN 3 WHEN 'MEDIUM' THEN 2 ELSE 1 END DESC",
+          "width": 6,
+          "height": 4,
+          "x": 0,
+          "y": 3,
+          "type": "pie",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "red_yellow_blue"
+          }
+        },
+        {
+          "id": "threat-detection-timeline",
+          "title": "Threat Detection Timeline (Last 60 Days)",
+          "query": "MATCH (t:Threat) WHERE t.first_seen IS NOT NULL AND datetime(t.first_seen) > datetime() - duration('P60D') WITH date(datetime(t.first_seen)) AS detection_date, t.severity AS severity RETURN detection_date, severity, count(*) AS threats_detected ORDER BY detection_date DESC",
+          "width": 6,
+          "height": 4,
+          "x": 6,
+          "y": 3,
+          "type": "line",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "red_yellow_blue",
+            "curve": "monotoneX",
+            "groupMode": "stacked"
+          }
+        },
+        {
+          "id": "top-threats-by-impact",
+          "title": "Critical Vulnerabilities Analysis",
+          "query": "MATCH (v:Vulnerability) WHERE v.cvss >= 8.0 OPTIONAL MATCH (h:Host)-[:HAS_VULNERABILITY]->(v) WITH v, count(h) as affected_hosts RETURN v.cve_id AS vulnerability_id, v.title AS vulnerability_name, v.cvss AS cvss_score, v.severity AS severity, affected_hosts ORDER BY v.cvss DESC, affected_hosts DESC LIMIT 15",
+          "width": 12,
+          "height": 5,
+          "x": 0,
+          "y": 7,
+          "type": "table",
+          "selection": {},
+          "settings": {
+            "compact": false,
+            "allowDownload": true
+          }
+        },
+        {
+          "id": "threat-vulnerability-network",
+          "title": "High-Risk Vulnerability Network",
+          "query": "MATCH (h:Host)-[:HAS_VULNERABILITY]->(v:Vulnerability) WHERE v.cvss >= 7.0 RETURN h, v LIMIT 40",
+          "width": 12,
+          "height": 6,
+          "x": 0,
+          "y": 12,
+          "type": "graph",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "red_yellow_blue",
+            "layout": "forceDirected",
+            "defaultNodeSize": "large"
+          }
+        }
+      ]
+    },
+    {
+      "title": "Attack Path Analysis",
+      "reports": [
+        {
+          "id": "complete-attack-paths",
+          "title": "Host-Vulnerability Attack Surface",
+          "query": "MATCH path = (h:Host)-[:HAS_VULNERABILITY]->(v:Vulnerability) WHERE v.cvss >= $cvss_threshold RETURN path LIMIT 30",
+          "width": 12,
+          "height": 8,
+          "x": 0,
+          "y": 0,
+          "type": "graph",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "red_yellow_blue",
+            "layout": "hierarchical",
+            "defaultNodeSize": "large"
+          }
+        },
+        {
+          "id": "critical-attack-paths-table",
+          "title": "Critical Vulnerabilities per Host (CVSS >= 7.0)",
+          "query": "MATCH (h:Host)-[:HAS_VULNERABILITY]->(v:Vulnerability) WHERE v.cvss >= 7.0 RETURN h.hostname AS vulnerable_host, h.ip AS host_ip, v.cve_id AS vulnerability, v.cvss AS cvss_score, v.severity AS vulnerability_severity, v.title AS vulnerability_title ORDER BY v.cvss DESC LIMIT 50",
+          "width": 12,
+          "height": 6,
+          "x": 0,
+          "y": 8,
+          "type": "table",
+          "selection": {},
+          "settings": {
+            "compact": false,
+            "allowDownload": true
+          }
+        },
+        {
+          "id": "attack-surface-by-host",
+          "title": "Attack Surface Analysis by Host",
+          "query": "MATCH (h:Host)-[:HAS_VULNERABILITY]->(v:Vulnerability) WITH h, count(v) AS vuln_count, max(v.cvss) AS max_cvss, avg(v.cvss) AS avg_cvss ORDER BY vuln_count DESC, max_cvss DESC LIMIT 20 RETURN h.hostname AS hostname, h.ip AS ip_address, vuln_count, round(max_cvss * 10) / 10 AS highest_cvss, round(avg_cvss * 10) / 10 AS avg_cvss",
+          "width": 8,
+          "height": 4,
+          "x": 0,
+          "y": 14,
+          "type": "table",
+          "selection": {},
+          "settings": {
+            "compact": false
+          }
+        },
+        {
+          "id": "threat-concentration-chart",
+          "title": "Vulnerability Severity Distribution",
+          "query": "MATCH (v:Vulnerability) WITH v.severity AS severity, count(v) AS vulnerability_count RETURN severity, vulnerability_count ORDER BY vulnerability_count DESC",
+          "width": 4,
+          "height": 4,
+          "x": 8,
+          "y": 14,
+          "type": "bar",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "red_yellow_blue",
+            "layout": "vertical"
+          }
+        }
+      ]
+    },
+    {
+      "title": "Asset Threat Assessment",
+      "reports": [
+        {
+          "id": "crown-jewel-threat-exposure",
+          "title": "Crown Jewel Assets Security Status",
+          "query": "MATCH (d:DataAsset {crown_jewel: true}) OPTIONAL MATCH (d)-[:RESIDES_ON]->(h:Host) OPTIONAL MATCH (h)-[:HAS_VULNERABILITY]->(v:Vulnerability) WITH d, h, collect(v) AS vulnerabilities, max(v.cvss) AS highest_cvss RETURN d.name AS crown_jewel_asset, d.sensitivity_score AS sensitivity, h.hostname AS host, size(vulnerabilities) AS vulnerability_count, COALESCE(highest_cvss, 0) AS highest_cvss ORDER BY d.sensitivity_score DESC, highest_cvss DESC",
+          "width": 12,
+          "height": 6,
+          "x": 0,
+          "y": 0,
+          "type": "table",
+          "selection": {},
+          "settings": {
+            "compact": false,
+            "allowDownload": true
+          }
+        },
+        {
+          "id": "asset-threat-network",
+          "title": "High-Sensitivity Asset Security Network", 
+          "query": "MATCH (d:DataAsset)-[:RESIDES_ON]->(h:Host) WHERE d.sensitivity_score >= 0.6 OPTIONAL MATCH (h)-[:HAS_VULNERABILITY]->(v:Vulnerability) RETURN d, h, v LIMIT 40",
+          "width": 12,
+          "height": 8,
+          "x": 0,
+          "y": 6,
+          "type": "graph",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "category10",
+            "layout": "forceDirected",
+            "defaultNodeSize": "large"
+          }
+        },
+        {
+          "id": "threat-mitigation-coverage",
+          "title": "Vulnerability Mitigation Coverage (ActionCards)",
+          "query": "MATCH (v:Vulnerability) WHERE v.cvss >= 7.0 OPTIONAL MATCH (ac:ActionCard)-[:MITIGATES]->(v) WITH v, count(ac) AS mitigation_actions RETURN v.cve_id AS vulnerability, v.cvss AS cvss_score, v.severity AS severity, mitigation_actions, CASE WHEN mitigation_actions > 0 THEN 'Mitigated' ELSE 'Unmitigated' END AS mitigation_status ORDER BY v.cvss DESC, mitigation_actions ASC",
+          "width": 12,
+          "height": 5,
+          "x": 0,
+          "y": 14,
+          "type": "table",
+          "selection": {},
+          "settings": {
+            "compact": false,
+            "allowDownload": true
+          }
+        }
+      ]
+    },
+    {
+      "title": "Threat Intelligence",
+      "reports": [
+        {
+          "id": "threat-by-severity-filter",
+          "title": "Threats by Severity Level",
+          "query": "MATCH (t:Threat {severity: $threat_severity}) RETURN t.title AS threat_name, t.description AS description, t.first_seen AS first_detected, t.source AS threat_source ORDER BY t.first_seen DESC LIMIT 20",
+          "width": 8,
+          "height": 6,
+          "x": 0,
+          "y": 0,
+          "type": "table",
+          "selection": {},
+          "settings": {
+            "compact": false,
+            "allowDownload": true
+          }
+        },
+        {
+          "id": "monthly-threat-trends",
+          "title": "Monthly Threat Detection Trends",
+          "query": "MATCH (t:Threat) WHERE t.first_seen IS NOT NULL WITH date.truncate('month', date(datetime(t.first_seen))) AS threat_month, t.severity AS severity RETURN threat_month, severity, count(*) AS threat_count ORDER BY threat_month DESC LIMIT 50",
+          "width": 4,
+          "height": 6,
+          "x": 8,
+          "y": 0,
+          "type": "line",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "red_yellow_blue",
+            "curve": "monotoneX",
+            "groupMode": "stacked"
+          }
+        },
+        {
+          "id": "vulnerability-exploitation-rate",
+          "title": "Vulnerability Risk Statistics",
+          "query": "MATCH (v:Vulnerability) WITH v.severity AS severity, count(v) AS vulnerability_count, avg(v.cvss) AS avg_cvss RETURN severity, vulnerability_count, round(avg_cvss * 10) / 10 AS avg_cvss_score ORDER BY avg_cvss DESC",
+          "width": 6,
+          "height": 4,
+          "x": 0,
+          "y": 6,
+          "type": "table",
+          "selection": {},
+          "settings": {
+            "compact": false
+          }
+        },
+        {
+          "id": "threat-source-analysis",
+          "title": "Threat Source Distribution",
+          "query": "MATCH (t:Threat) RETURN t.source AS threat_source, count(*) AS threat_count ORDER BY threat_count DESC",
+          "width": 6,
+          "height": 4,
+          "x": 6,
+          "y": 6,
+          "type": "pie",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "category10"
+          }
+        },
+        {
+          "id": "high-confidence-threats",
+          "title": "Critical Vulnerabilities (CVSS >= 8.0)",
+          "query": "MATCH (v:Vulnerability) WHERE v.cvss >= 8.0 OPTIONAL MATCH (h:Host)-[:HAS_VULNERABILITY]->(v) WITH v, count(h) AS affected_hosts RETURN v.cve_id AS vulnerability, v.cvss AS cvss_score, v.title AS vulnerability_name, v.severity AS vulnerability_severity, affected_hosts ORDER BY v.cvss DESC LIMIT 20",
+          "width": 12,
+          "height": 5,
+          "x": 0,
+          "y": 10,
+          "type": "table",
+          "selection": {},
+          "settings": {
+            "compact": false,
+            "allowDownload": true
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,322 @@
+{
+  "perspective": {
+    "name": "ORBIT Security Analysis",
+    "description": "Comprehensive cybersecurity graph exploration for threat analysis and asset management",
+    "version": "1.0",
+    "created": "2026-03-08T00:00:00Z",
+    "updated": "2026-03-08T00:00:00Z"
+  },
+  "nodeTypes": {
+    "Host": {
+      "displayProperty": "hostname",
+      "sizeProperty": "*",
+      "colorProperty": "*",
+      "defaultSize": 30,
+      "baseColor": "#3498db",
+      "icon": "desktop",
+      "labelPosition": "bottom",
+      "properties": {
+        "visible": ["hostname", "ip", "os", "agent_version", "last_seen"],
+        "searchable": ["hostname", "ip", "host_id"],
+        "indexed": ["hostname", "ip"]
+      },
+      "styling": {
+        "border": {
+          "width": 2,
+          "color": "#2980b9"
+        },
+        "size": {
+          "min": 20,
+          "max": 60,
+          "property": "vulnerability_count"
+        }
+      }
+    },
+    "DataAsset": {
+      "displayProperty": "location_pseudonym",
+      "sizeProperty": "sensitivity_score",
+      "colorProperty": "crown_jewel",
+      "defaultSize": 25,
+      "baseColor": "#95a5a6",
+      "icon": "database",
+      "labelPosition": "bottom",
+      "properties": {
+        "visible": ["location_pseudonym", "sensitivity_score", "crown_jewel", "pii_types", "scan_status"],
+        "searchable": ["location_pseudonym", "asset_hash"],
+        "indexed": ["sensitivity_score", "crown_jewel"]
+      },
+      "styling": {
+        "conditionalColors": {
+          "crown_jewel = true": "#f1c40f",
+          "crown_jewel = false": "#95a5a6"
+        },
+        "border": {
+          "width": "crown_jewel ? 4 : 2",
+          "color": "crown_jewel ? '#e67e22' : '#7f8c8d'"
+        },
+        "size": {
+          "min": 15,
+          "max": 50,
+          "property": "sensitivity_score"
+        }
+      }
+    },
+    "Vulnerability": {
+      "displayProperty": "cve_id",
+      "sizeProperty": "cvss",
+      "colorProperty": "cvss",
+      "defaultSize": 20,
+      "baseColor": "#e67e22",
+      "icon": "warning",
+      "labelPosition": "bottom",
+      "properties": {
+        "visible": ["cve_id", "title", "cvss", "published_date"],
+        "searchable": ["cve_id", "title"],
+        "indexed": ["cvss"]
+      },
+      "styling": {
+        "conditionalColors": {
+          "cvss >= 9.0": "#8e44ad",
+          "cvss >= 7.0": "#e74c3c", 
+          "cvss >= 4.0": "#e67e22",
+          "cvss < 4.0": "#f39c12"
+        },
+        "size": {
+          "min": 10,
+          "max": 40,
+          "property": "cvss"
+        },
+        "border": {
+          "width": 2,
+          "color": "#d35400"
+        }
+      }
+    },
+    "Threat": {
+      "displayProperty": "title",
+      "sizeProperty": "severity",
+      "colorProperty": "severity",
+      "defaultSize": 30,
+      "baseColor": "#e74c3c",
+      "icon": "skull",
+      "labelPosition": "bottom",
+      "properties": {
+        "visible": ["title", "severity", "description", "first_seen"],
+        "searchable": ["title", "threat_id"],
+        "indexed": ["severity"]
+      },
+      "styling": {
+        "conditionalColors": {
+          "severity = 'CRITICAL'": "#8e44ad",
+          "severity = 'HIGH'": "#e74c3c",
+          "severity = 'MEDIUM'": "#e67e22",
+          "severity = 'LOW'": "#f39c12"
+        },
+        "size": {
+          "min": 15,
+          "max": 45,
+          "property": "severity"
+        },
+        "effects": {
+          "pulse": "severity IN ['CRITICAL', 'HIGH']"
+        }
+      }
+    },
+    "ActionCard": {
+      "displayProperty": "summary",
+      "sizeProperty": "*",
+      "colorProperty": "status",
+      "defaultSize": 25,
+      "baseColor": "#9b59b6",
+      "icon": "clipboard",
+      "labelPosition": "bottom",
+      "properties": {
+        "visible": ["summary", "action_type", "status", "confidence", "origin"],
+        "searchable": ["summary", "action_id", "action_type"],
+        "indexed": ["status"]
+      },
+      "styling": {
+        "conditionalColors": {
+          "status = 'received'": "#3498db",
+          "status = 'pending'": "#f39c12",
+          "status = 'approved'": "#2ecc71",
+          "status = 'executing'": "#9b59b6",
+          "status = 'completed'": "#27ae60",
+          "status = 'rejected'": "#95a5a6",
+          "status = 'failed'": "#e74c3c"
+        },
+        "border": {
+          "style": "dashed",
+          "width": 2
+        }
+      }
+    },
+    "Service": {
+      "displayProperty": "name",
+      "sizeProperty": "*",
+      "colorProperty": "*",
+      "defaultSize": 18,
+      "baseColor": "#1abc9c",
+      "icon": "cog",
+      "labelPosition": "right",
+      "properties": {
+        "visible": ["name", "port", "protocol", "state"],
+        "searchable": ["name", "service_id"],
+        "indexed": ["name", "port"]
+      }
+    },
+    "Application": {
+      "displayProperty": "name",
+      "sizeProperty": "*", 
+      "colorProperty": "*",
+      "defaultSize": 18,
+      "baseColor": "#34495e",
+      "icon": "package",
+      "labelPosition": "right",
+      "properties": {
+        "visible": ["name", "version", "install_path"],
+        "searchable": ["name", "app_id"],
+        "indexed": ["name"]
+      }
+    },
+    "Analyst": {
+      "displayProperty": "analyst_id",
+      "sizeProperty": "*",
+      "colorProperty": "*",
+      "defaultSize": 22,
+      "baseColor": "#16a085",
+      "icon": "user",
+      "labelPosition": "bottom",
+      "properties": {
+        "visible": ["analyst_id"],
+        "searchable": ["analyst_id"],
+        "indexed": ["analyst_id"]
+      }
+    },
+    "DeltaEvent": {
+      "displayProperty": "delta_id",
+      "sizeProperty": "entity_count",
+      "colorProperty": "sent_status",
+      "defaultSize": 20,
+      "baseColor": "#7f8c8d",
+      "icon": "sync",
+      "labelPosition": "bottom",
+      "properties": {
+        "visible": ["delta_id", "sent_status", "entity_count", "generated_ts"],
+        "searchable": ["delta_id"],
+        "indexed": ["sent_status"]
+      }
+    }
+  },
+  "relationshipTypes": {
+    "HAS_VULNERABILITY": {
+      "color": "#e67e22",
+      "thickness": 2,
+      "style": "solid",
+      "caption": "vulnerable to"
+    },
+    "EXPLOITED_BY": {
+      "color": "#e74c3c",
+      "thickness": 3,
+      "style": "solid",
+      "caption": "exploited by",
+      "animation": "flow"
+    },
+    "AFFECTS": {
+      "color": "#9b59b6",
+      "thickness": 2,
+      "style": "dashed",
+      "caption": "affects"
+    },
+    "RESIDES_ON": {
+      "color": "#3498db",
+      "thickness": 1,
+      "style": "solid",
+      "caption": "resides on"
+    },
+    "RUNS": {
+      "color": "#1abc9c",
+      "thickness": 1,
+      "style": "solid",
+      "caption": "runs"
+    },
+    "HAS_APP": {
+      "color": "#34495e",
+      "thickness": 1,
+      "style": "solid",
+      "caption": "has application"
+    },
+    "ASSIGNED_TO": {
+      "color": "#16a085",
+      "thickness": 2,
+      "style": "dotted",
+      "caption": "assigned to"
+    },
+    "APPROVED_BY": {
+      "color": "#27ae60",
+      "thickness": 2,
+      "style": "dotted",
+      "caption": "approved by"
+    },
+    "EXECUTED": {
+      "color": "#8e44ad",
+      "thickness": 2,
+      "style": "solid",
+      "caption": "executed"
+    },
+    "INCLUDED_IN": {
+      "color": "#7f8c8d",
+      "thickness": 1,
+      "style": "dashed",
+      "caption": "included in"
+    }
+  },
+  "layouts": {
+    "default": {
+      "name": "Force Directed",
+      "type": "force",
+      "iterations": 500,
+      "springLength": 80,
+      "springConstant": 0.0001,
+      "damping": 0.9
+    },
+    "hierarchical": {
+      "name": "Hierarchical",
+      "type": "hierarchical",
+      "direction": "top-down",
+      "nodeSpacing": 100,
+      "levelSeparation": 150
+    },
+    "circular": {
+      "name": "Circular", 
+      "type": "circular",
+      "radius": 200
+    }
+  },
+  "scenes": [
+    {
+      "name": "Security Overview",
+      "description": "High-level view of security posture",
+      "query": "MATCH (h:Host) OPTIONAL MATCH (h)-[:HAS_VULNERABILITY]->(v:Vulnerability) OPTIONAL MATCH (h)<-[:RESIDES_ON]-(d:DataAsset {crown_jewel: true}) WITH h, count(v) AS vuln_count, count(d) AS crown_jewel_count WHERE vuln_count > 0 OR crown_jewel_count > 0 RETURN h, vuln_count, crown_jewel_count LIMIT 20",
+      "layout": "force"
+    },
+    {
+      "name": "Crown Jewel Security",
+      "description": "Focus on crown jewel asset protection",
+      "query": "MATCH (d:DataAsset {crown_jewel: true})-[:RESIDES_ON]->(h:Host) OPTIONAL MATCH (h)-[:HAS_VULNERABILITY]->(v:Vulnerability) OPTIONAL MATCH (d)<-[:AFFECTS]-(ac:ActionCard) RETURN d, h, v, ac",
+      "layout": "hierarchical"
+    },
+    {
+      "name": "Active Threats",
+      "description": "Current threat landscape and attack paths",
+      "query": "MATCH (t:Threat)<-[:EXPLOITED_BY]-(v:Vulnerability)<-[:HAS_VULNERABILITY]-(h:Host) WHERE t.severity IN ['CRITICAL', 'HIGH'] RETURN t, v, h LIMIT 30",
+      "layout": "hierarchical"
+    },
+    {
+      "name": "Workflow Management",
+      "description": "ActionCard assignment and workflow status",
+      "query": "MATCH (ac:ActionCard)-[:ASSIGNED_TO]->(an:Analyst) OPTIONAL MATCH (ac)-[:AFFECTS]->(target) WHERE ac.status IN ['pending', 'approved', 'executing'] RETURN ac, an, target LIMIT 25",
+      "layout": "force"
+    }
+  ]
+}

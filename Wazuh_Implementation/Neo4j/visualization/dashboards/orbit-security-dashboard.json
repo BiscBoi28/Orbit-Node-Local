@@ -1,0 +1,409 @@
+{
+  "title": "ORBIT Security Operations Center",
+  "version": "2.4.0",
+  "settings": {
+    "pagenumber": 0,
+    "editable": true,
+    "fullscreenEnabled": false,
+    "parameters": {}
+  },
+  "pages": [
+    {
+      "title": "Security Overview",
+      "reports": [
+        {
+          "id": "security-overview-hosts",
+          "title": "Total Hosts",
+          "query": "MATCH (h:Host) RETURN count(h) AS total_hosts",
+          "width": 3,
+          "height": 3,
+          "x": 0,
+          "y": 0,
+          "type": "value",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "nivo",
+            "layout": "horizontal",
+            "format": "0,0",
+            "suffix": " hosts"
+          }
+        },
+        {
+          "id": "security-overview-vulnerabilities",
+          "title": "Active Vulnerabilities",
+          "query": "MATCH (v:Vulnerability) RETURN count(v) AS total_vulns",
+          "width": 3,
+          "height": 3,
+          "x": 3,
+          "y": 0,
+          "type": "value",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "category10",
+            "format": "0,0",
+            "suffix": " CVEs",
+            "textColor": "#e67e22"
+          }
+        },
+        {
+          "id": "security-overview-crown-jewels",
+          "title": "Crown Jewel Assets",
+          "query": "MATCH (d:DataAsset {crown_jewel: true}) RETURN count(d) AS crown_jewels",
+          "width": 3,
+          "height": 3,
+          "x": 6,
+          "y": 0,
+          "type": "value",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "yellow_orange_red",
+            "format": "0,0",
+            "suffix": " assets",
+            "textColor": "#f1c40f"
+          }
+        },
+        {
+          "id": "security-overview-pending-actions",
+          "title": "Pending Actions",
+          "query": "MATCH (ac:ActionCard {status: 'pending'}) RETURN count(ac) AS pending_actions",
+          "width": 3,
+          "height": 3,
+          "x": 9,
+          "y": 0,
+          "type": "value",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "category10",
+            "format": "0,0",
+            "suffix": " cards",
+            "textColor": "#f39c12"
+          }
+        },
+        {
+          "id": "vulnerability-severity-distribution",
+          "title": "Vulnerability Severity Distribution",
+          "query": "MATCH (v:Vulnerability) WITH CASE WHEN v.cvss >= 9.0 THEN 'Critical' WHEN v.cvss >= 7.0 THEN 'High' WHEN v.cvss >= 4.0 THEN 'Medium' ELSE 'Low' END AS severity RETURN severity, count(*) AS count ORDER BY count DESC",
+          "width": 6,
+          "height": 4,
+          "x": 0,
+          "y": 3,
+          "type": "bar",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "red_yellow_green",
+            "layout": "horizontal",
+            "marginLeft": 80,
+            "marginRight": 40,
+            "marginTop": 20,
+            "marginBottom": 70
+          }
+        },
+        {
+          "id": "actioncard-status-pie",
+          "title": "ActionCard Status Distribution",
+          "query": "MATCH (ac:ActionCard) RETURN ac.status AS status, count(*) AS count",
+          "width": 6,
+          "height": 4,
+          "x": 6,
+          "y": 3,
+          "type": "pie",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "category10",
+            "layout": "horizontal"
+          }
+        },
+        {
+          "id": "top-vulnerable-hosts",
+          "title": "Most Vulnerable Hosts",
+          "query": "MATCH (h:Host)-[:HAS_VULNERABILITY]->(v:Vulnerability) WITH h, count(v) AS vuln_count ORDER BY vuln_count DESC LIMIT 10 RETURN h.hostname AS hostname, h.ip AS ip_address, vuln_count",
+          "width": 6,
+          "height": 5,
+          "x": 0,
+          "y": 7,
+          "type": "table",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "category10",
+            "compact": false,
+            "allowDownload": true
+          }
+        },
+        {
+          "id": "crown-jewel-assets-table",
+          "title": "Crown Jewel Data Assets",
+          "query": "MATCH (d:DataAsset {crown_jewel: true})-[:RESIDES_ON]->(h:Host) RETURN d.location_pseudonym AS asset_location, d.sensitivity_score AS sensitivity, h.hostname AS host, d.pii_types AS pii_types ORDER BY d.sensitivity_score DESC",
+          "width": 6,
+          "height": 5,
+          "x": 6,
+          "y": 7,
+          "type": "table",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "yellow_orange_red",
+            "compact": false,
+            "allowDownload": true
+          }
+        },
+        {
+          "id": "threat-severity-chart",
+          "title": "Threat Intelligence by Severity",
+          "query": "MATCH (t:Threat) RETURN t.severity AS severity, count(*) AS threat_count ORDER BY CASE t.severity WHEN 'CRITICAL' THEN 4 WHEN 'HIGH' THEN 3 WHEN 'MEDIUM' THEN 2 ELSE 1 END DESC",
+          "width": 4,
+          "height": 3,
+          "x": 0,
+          "y": 12,
+          "type": "bar",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "red_yellow_blue",
+            "layout": "vertical"
+          }
+        },
+        {
+          "id": "asset-sensitivity-distribution",
+          "title": "Data Asset Sensitivity Distribution",
+          "query": "MATCH (d:DataAsset) WITH CASE WHEN d.sensitivity_score >= 0.8 THEN 'Very High' WHEN d.sensitivity_score >= 0.6 THEN 'High' WHEN d.sensitivity_score >= 0.4 THEN 'Medium' WHEN d.sensitivity_score >= 0.2 THEN 'Low' ELSE 'Very Low' END AS sensitivity_level RETURN sensitivity_level, count(*) AS asset_count ORDER BY asset_count DESC",
+          "width": 4,
+          "height": 3,
+          "x": 4,
+          "y": 12,
+          "type": "pie",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "yellow_orange_red"
+          }
+        },
+        {
+          "id": "recent-activity-timeline",
+          "title": "Recent Security Activity (Last 7 Days)",
+          "query": "MATCH (n) WHERE n.last_updated > datetime() - duration('P7D') WITH date(n.last_updated) AS activity_date, labels(n)[0] AS entity_type RETURN activity_date, entity_type, count(*) AS activity_count ORDER BY activity_date DESC",
+          "width": 4,
+          "height": 3,
+          "x": 8,
+          "y": 12,
+          "type": "line",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "category10",
+            "curve": "monotoneX"
+          }
+        }
+      ]
+    },
+    {
+      "title": "Asset Intelligence",
+      "reports": [
+        {
+          "id": "pii-type-distribution",
+          "title": "PII Types in Data Assets",
+          "query": "MATCH (d:DataAsset) WHERE size(d.pii_types) > 0 UNWIND d.pii_types AS pii_type RETURN pii_type, count(*) AS occurrence_count ORDER BY occurrence_count DESC",
+          "width": 6,
+          "height": 4,
+          "x": 0,
+          "y": 0,
+          "type": "bar",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "category10",
+            "layout": "horizontal",
+            "marginLeft": 120
+          }
+        },
+        {
+          "id": "sensitivity-by-host",
+          "title": "Average Asset Sensitivity by Host",
+          "query": "MATCH (d:DataAsset)-[:RESIDES_ON]->(h:Host) WITH h, avg(d.sensitivity_score) AS avg_sensitivity ORDER BY avg_sensitivity DESC LIMIT 15 RETURN h.hostname AS hostname, round(avg_sensitivity * 100) / 100 AS average_sensitivity",
+          "width": 6,
+          "height": 4,
+          "x": 6,
+          "y": 0,
+          "type": "bar",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "yellow_orange_red",
+            "layout": "horizontal"
+          }
+        },
+        {
+          "id": "crown-jewel-network",
+          "title": "Crown Jewel Asset Relationships",
+          "query": "MATCH (d:DataAsset {crown_jewel: true})-[:RESIDES_ON]->(h:Host) OPTIONAL MATCH (h)-[:HAS_VULNERABILITY]->(v:Vulnerability) OPTIONAL MATCH (d)<-[:AFFECTS]-(ac:ActionCard) RETURN d, h, v, ac LIMIT 50",
+          "width": 12,
+          "height": 6,
+          "x": 0,
+          "y": 4,
+          "type": "graph",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "category10",
+            "defaultNodeSize": "large",
+            "hideSelections": true,
+            "layout": "forceDirected"
+          }
+        },
+        {
+          "id": "high-risk-combinations",
+          "title": "High-Risk PII Combinations",
+          "query": "MATCH (d:DataAsset) WHERE size(d.pii_types) >= 2 AND d.sensitivity_score >= 0.7 RETURN d.location_pseudonym AS asset_location, d.pii_types AS pii_combination, d.sensitivity_score AS sensitivity, d.crown_jewel AS is_crown_jewel ORDER BY d.sensitivity_score DESC LIMIT 20",
+          "width": 6,
+          "height": 4,
+          "x": 0,
+          "y": 10,
+          "type": "table",
+          "selection": {},
+          "settings": {
+            "compact": false,
+            "allowDownload": true
+          }
+        },
+        {
+          "id": "asset-scan-status",
+          "title": "Asset Scan Status Overview",
+          "query": "MATCH (d:DataAsset) RETURN d.scan_status AS scan_status, count(*) AS asset_count",
+          "width": 6,
+          "height": 4,
+          "x": 6,
+          "y": 10,
+          "type": "pie",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "green_blue"
+          }
+        }
+      ]
+    },
+    {
+      "title": "Threat Analysis", 
+      "reports": [
+        {
+          "id": "attack-path-visualization",
+          "title": "Attack Path Analysis",
+          "query": "MATCH path = (h:Host)-[:HAS_VULNERABILITY]->(v:Vulnerability)-[:EXPLOITED_BY]->(t:Threat) WITH path, h, v, t WHERE v.cvss >= 7.0 RETURN path LIMIT 25",
+          "width": 12,
+          "height": 8,
+          "x": 0,
+          "y": 0,
+          "type": "graph",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "red_yellow_blue",
+            "defaultNodeSize": "large",
+            "layout": "hierarchical"
+          }
+        },
+        {
+          "id": "threat-impact-matrix",
+          "title": "Threat Impact vs Likelihood Matrix",
+          "query": "MATCH (t:Threat)<-[:EXPLOITED_BY]-(v:Vulnerability)<-[:HAS_VULNERABILITY]-(h:Host) WITH t, count(DISTINCT h) AS affected_hosts, avg(v.cvss) AS avg_cvss RETURN t.title AS threat_name, t.severity AS threat_severity, affected_hosts, round(avg_cvss * 10) / 10 AS average_cvss ORDER BY affected_hosts DESC, avg_cvss DESC LIMIT 15",
+          "width": 8,
+          "height": 4,
+          "x": 0,
+          "y": 8,
+          "type": "table",
+          "selection": {},
+          "settings": {
+            "compact": false,
+            "allowDownload": true
+          }
+        },
+        {
+          "id": "threat-timeline",
+          "title": "Threat Detection Timeline",
+          "query": "MATCH (t:Threat) WHERE t.first_seen IS NOT NULL WITH date(datetime(t.first_seen)) AS detection_date RETURN detection_date, count(*) AS threats_detected ORDER BY detection_date DESC LIMIT 30",
+          "width": 4,
+          "height": 4,
+          "x": 8,
+          "y": 8,
+          "type": "line",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "red_yellow_blue",
+            "curve": "monotoneX"
+          }
+        }
+      ]
+    },
+    {
+      "title": "Workflow Management",
+      "reports": [
+        {
+          "id": "actioncard-funnel",
+          "title": "ActionCard Workflow Funnel",
+          "query": "MATCH (ac:ActionCard) WITH ac.status AS status, count(*) AS card_count, CASE ac.status WHEN 'received' THEN 1 WHEN 'pending' THEN 2 WHEN 'approved' THEN 3 WHEN 'executing' THEN 4 WHEN 'completed' THEN 5 WHEN 'rejected' THEN 6 WHEN 'failed' THEN 7 END AS sort_order RETURN status, card_count ORDER BY sort_order",
+          "width": 6,
+          "height": 4,
+          "x": 0,
+          "y": 0,
+          "type": "bar",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "category10",
+            "layout": "horizontal"
+          }
+        },
+        {
+          "id": "analyst-workload",
+          "title": "Analyst Workload Distribution",
+          "query": "MATCH (an:Analyst)<-[:ASSIGNED_TO]-(ac:ActionCard) WITH an, count(ac) AS assigned_cards, collect(DISTINCT ac.status) AS card_statuses RETURN an.analyst_id AS analyst, assigned_cards, card_statuses ORDER BY assigned_cards DESC",
+          "width": 6,
+          "height": 4,
+          "x": 6,
+          "y": 0,
+          "type": "table",
+          "selection": {},
+          "settings": {
+            "compact": false
+          }
+        },
+        {
+          "id": "actioncard-priority-matrix",
+          "title": "ActionCard Priority vs Status Matrix",
+          "query": "MATCH (ac:ActionCard) WHERE ac.metadata IS NOT NULL AND ac.metadata.priority IS NOT NULL RETURN ac.metadata.priority AS priority, ac.status AS status, count(*) AS card_count",
+          "width": 6,
+          "height": 4,
+          "x": 0,
+          "y": 4,
+          "type": "bar",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "red_yellow_green",
+            "layout": "grouped"
+          }
+        },
+        {
+          "id": "workflow-completion-rate",
+          "title": "Workflow Completion Metrics",
+          "query": "MATCH (ac:ActionCard) WITH count(ac) AS total_cards, size([ac IN collect(ac) WHERE ac.status = 'completed']) AS completed_cards, size([ac IN collect(ac) WHERE ac.status IN ['rejected', 'failed']]) AS failed_cards RETURN total_cards, completed_cards, failed_cards, round((completed_cards * 100.0) / total_cards) AS completion_rate",
+          "width": 6,
+          "height": 4,
+          "x": 6,
+          "y": 4,
+          "type": "value",
+          "selection": {},
+          "settings": {
+            "format": "0.0",
+            "suffix": "% completion rate",
+            "textColor": "#2ecc71"
+          }
+        },
+        {
+          "id": "actioncard-network",
+          "title": "ActionCard Assignment Network",
+          "query": "MATCH (ac:ActionCard)-[:ASSIGNED_TO]->(an:Analyst) OPTIONAL MATCH (ac)-[:AFFECTS]->(target) RETURN ac, an, target LIMIT 40",
+          "width": 12,
+          "height": 6,
+          "x": 0,
+          "y": 8,
+          "type": "graph",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "category10",
+            "layout": "forceDirected",
+            "defaultNodeSize": "medium"
+          }
+        }
+      ]
+    }
+  ]
+}

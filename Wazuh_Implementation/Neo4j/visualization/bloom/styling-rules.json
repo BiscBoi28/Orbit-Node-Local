@@ -1,0 +1,497 @@
+{
+  "styling_rules": {
+    "metadata": {
+      "name": "ORBIT Security Styling Rules",
+      "description": "Visual styling configuration for cybersecurity graph analysis",
+      "version": "1.0",
+      "created": "2026-03-08T00:00:00Z"
+    },
+    "global_settings": {
+      "default_node_size": 25,
+      "default_relationship_thickness": 2,
+      "animation_duration": 1000,
+      "label_font_size": 12,
+      "relationship_label_font_size": 10
+    },
+    "node_styling": {
+      "Host": {
+        "base_style": {
+          "color": "#3498db",
+          "border_color": "#2980b9",
+          "border_width": 2,
+          "size_range": [20, 60],
+          "icon": "server",
+          "label_position": "bottom"
+        },
+        "conditional_styling": [
+          {
+            "condition": "vulnerability_count >= 10",
+            "style": {
+              "color": "#e74c3c",
+              "border_color": "#c0392b",
+              "border_width": 3,
+              "pulse_effect": true
+            }
+          },
+          {
+            "condition": "vulnerability_count >= 5",
+            "style": {
+              "color": "#e67e22",
+              "border_color": "#d35400"
+            }
+          },
+          {
+            "condition": "os CONTAINS 'Windows'",
+            "style": {
+              "icon": "windows"
+            }
+          },
+          {
+            "condition": "os CONTAINS 'Linux' OR os CONTAINS 'Ubuntu' OR os CONTAINS 'CentOS'", 
+            "style": {
+              "icon": "linux"
+            }
+          }
+        ],
+        "size_mapping": {
+          "property": "vulnerability_count",
+          "min_size": 20,
+          "max_size": 60,
+          "default_size": 30
+        }
+      },
+      "DataAsset": {
+        "base_style": {
+          "color": "#95a5a6",
+          "border_color": "#7f8c8d", 
+          "border_width": 2,
+          "size_range": [15, 50],
+          "icon": "database",
+          "label_position": "bottom"
+        },
+        "conditional_styling": [
+          {
+            "condition": "crown_jewel = true",
+            "style": {
+              "color": "#f1c40f",
+              "border_color": "#f39c12",
+              "border_width": 4,
+              "glow_effect": true,
+              "icon": "gem"
+            }
+          },
+          {
+            "condition": "sensitivity_score >= 0.8",
+            "style": {
+              "color": "#e67e22",
+              "border_color": "#d35400"
+            }
+          },
+          {
+            "condition": "sensitivity_score >= 0.6",
+            "style": {
+              "color": "#f39c12",
+              "border_color": "#e67e22"
+            }
+          },
+          {
+            "condition": "size(pii_types) >= 3",
+            "style": {
+              "border_style": "double",
+              "border_width": 3
+            }
+          }
+        ],
+        "size_mapping": {
+          "property": "sensitivity_score",
+          "min_size": 15,
+          "max_size": 50,
+          "default_size": 25
+        }
+      },
+      "Vulnerability": {
+        "base_style": {
+          "color": "#e67e22",
+          "border_color": "#d35400",
+          "border_width": 2,
+          "size_range": [10, 40],
+          "icon": "warning",
+          "label_position": "bottom"
+        },
+        "conditional_styling": [
+          {
+            "condition": "cvss >= 9.0",
+            "style": {
+              "color": "#8e44ad",
+              "border_color": "#7d3c98",
+              "pulse_effect": true,
+              "icon": "skull"
+            }
+          },
+          {
+            "condition": "cvss >= 7.0",
+            "style": {
+              "color": "#e74c3c", 
+              "border_color": "#c0392b",
+              "pulse_effect": true
+            }
+          },
+          {
+            "condition": "cvss >= 4.0",
+            "style": {
+              "color": "#e67e22",
+              "border_color": "#d35400"
+            }
+          },
+          {
+            "condition": "cvss < 4.0",
+            "style": {
+              "color": "#f39c12",
+              "border_color": "#e67e22"
+            }
+          }
+        ],
+        "size_mapping": {
+          "property": "cvss",
+          "min_size": 10,
+          "max_size": 40,
+          "scale": "linear"
+        }
+      },
+      "Threat": {
+        "base_style": {
+          "color": "#e74c3c",
+          "border_color": "#c0392b",
+          "border_width": 2,
+          "size_range": [15, 45],
+          "icon": "skull",
+          "label_position": "bottom"
+        },
+        "conditional_styling": [
+          {
+            "condition": "severity = 'CRITICAL'",
+            "style": {
+              "color": "#8e44ad",
+              "border_color": "#7d3c98",
+              "border_width": 4,
+              "pulse_effect": true,
+              "glow_effect": true
+            }
+          },
+          {
+            "condition": "severity = 'HIGH'",
+            "style": {
+              "color": "#e74c3c",
+              "border_color": "#c0392b",
+              "pulse_effect": true
+            }
+          },
+          {
+            "condition": "severity = 'MEDIUM'",
+            "style": {
+              "color": "#e67e22",
+              "border_color": "#d35400"
+            }
+          },
+          {
+            "condition": "severity = 'LOW'",
+            "style": {
+              "color": "#f39c12",
+              "border_color": "#e67e22"
+            }
+          }
+        ],
+        "size_mapping": {
+          "property": "affected_hosts_count",
+          "min_size": 15,
+          "max_size": 45,
+          "default_size": 25
+        }
+      },
+      "ActionCard": {
+        "base_style": {
+          "color": "#9b59b6",
+          "border_color": "#8e44ad",
+          "border_width": 2,
+          "border_style": "dashed",
+          "size_range": [18, 35],
+          "icon": "clipboard",
+          "label_position": "bottom"
+        },
+        "conditional_styling": [
+          {
+            "condition": "status = 'received'",
+            "style": {
+              "color": "#3498db",
+              "border_color": "#2980b9"
+            }
+          },
+          {
+            "condition": "status = 'pending'",
+            "style": {
+              "color": "#f39c12",
+              "border_color": "#e67e22",
+              "pulse_effect": true
+            }
+          },
+          {
+            "condition": "status = 'approved'",
+            "style": {
+              "color": "#2ecc71",
+              "border_color": "#27ae60"
+            }
+          },
+          {
+            "condition": "status = 'executing'",
+            "style": {
+              "color": "#9b59b6",
+              "border_color": "#8e44ad",
+              "rotation_effect": true
+            }
+          },
+          {
+            "condition": "status = 'completed'",
+            "style": {
+              "color": "#27ae60",
+              "border_color": "#229954",
+              "border_style": "solid"
+            }
+          },
+          {
+            "condition": "status = 'rejected'",
+            "style": {
+              "color": "#95a5a6",
+              "border_color": "#7f8c8d",
+              "opacity": 0.7
+            }
+          },
+          {
+            "condition": "status = 'failed'",
+            "style": {
+              "color": "#e74c3c",
+              "border_color": "#c0392b",
+              "border_style": "solid"
+            }
+          }
+        ],
+        "size_mapping": {
+          "property": "confidence",
+          "min_size": 18,
+          "max_size": 35,
+          "scale": "linear"
+        }
+      },
+      "Service": {
+        "base_style": {
+          "color": "#1abc9c",
+          "border_color": "#16a085",
+          "border_width": 1,
+          "size_range": [12, 25],
+          "icon": "cog",
+          "label_position": "right"
+        },
+        "conditional_styling": [
+          {
+            "condition": "state = 'stopped'",
+            "style": {
+              "color": "#e74c3c",
+              "opacity": 0.6
+            }
+          },
+          {
+            "condition": "state = 'starting'", 
+            "style": {
+              "color": "#f39c12",
+              "pulse_effect": true
+            }
+          },
+          {
+            "condition": "port IN [80, 443, 8080, 8443]",
+            "style": {
+              "icon": "web",
+              "border_width": 2
+            }
+          },
+          {
+            "condition": "port IN [3306, 5432, 1521, 27017]",
+            "style": {
+              "icon": "database",
+              "border_width": 2
+            }
+          }
+        ]
+      },
+      "Application": {
+        "base_style": {
+          "color": "#34495e",
+          "border_color": "#2c3e50",
+          "border_width": 1,
+          "size_range": [12, 25],
+          "icon": "package",
+          "label_position": "right"
+        }
+      },
+      "Analyst": {
+        "base_style": {
+          "color": "#16a085",
+          "border_color": "#138d75",
+          "border_width": 2,
+          "size_range": [18, 30],
+          "icon": "user",
+          "label_position": "bottom"
+        },
+        "size_mapping": {
+          "property": "assigned_actioncard_count",
+          "min_size": 18,
+          "max_size": 30,
+          "default_size": 22
+        }
+      }
+    },
+    "relationship_styling": {
+      "HAS_VULNERABILITY": {
+        "color": "#e67e22",
+        "thickness": 2,
+        "style": "solid",
+        "opacity": 0.8,
+        "label": "vulnerable to",
+        "conditional_styling": [
+          {
+            "condition": "target.cvss >= 9.0",
+            "style": {
+              "thickness": 4,
+              "color": "#e74c3c",
+              "pulse_effect": true
+            }
+          }
+        ]
+      },
+      "EXPLOITED_BY": {
+        "color": "#e74c3c",
+        "thickness": 3,
+        "style": "solid", 
+        "opacity": 0.9,
+        "label": "exploited by",
+        "animation": "flow",
+        "animation_speed": "medium"
+      },
+      "AFFECTS": {
+        "color": "#9b59b6",
+        "thickness": 2,
+        "style": "dashed",
+        "opacity": 0.7,
+        "label": "affects"
+      },
+      "RESIDES_ON": {
+        "color": "#3498db",
+        "thickness": 1,
+        "style": "solid",
+        "opacity": 0.6,
+        "label": "resides on"
+      },
+      "RUNS": {
+        "color": "#1abc9c",
+        "thickness": 1,
+        "style": "solid",
+        "opacity": 0.5,
+        "label": "runs"
+      },
+      "HAS_APP": {
+        "color": "#34495e",
+        "thickness": 1,
+        "style": "solid",
+        "opacity": 0.5,
+        "label": "has app"
+      },
+      "ASSIGNED_TO": {
+        "color": "#16a085",
+        "thickness": 2,
+        "style": "dotted",
+        "opacity": 0.7,
+        "label": "assigned to"
+      },
+      "APPROVED_BY": {
+        "color": "#27ae60",
+        "thickness": 2,
+        "style": "dotted",
+        "opacity": 0.7,
+        "label": "approved by"
+      },
+      "EXECUTED": {
+        "color": "#8e44ad",
+        "thickness": 2,
+        "style": "solid",
+        "opacity": 0.8,
+        "label": "executed"
+      },
+      "INCLUDED_IN": {
+        "color": "#7f8c8d",
+        "thickness": 1,
+        "style": "dashed",
+        "opacity": 0.4,
+        "label": "included in"
+      }
+    },
+    "layout_settings": {
+      "force_directed": {
+        "spring_length": 80,
+        "spring_constant": 0.0001,
+        "damping": 0.9,
+        "iterations": 500,
+        "node_repulsion": 1000
+      },
+      "hierarchical": {
+        "direction": "top-down",
+        "node_spacing": 100,
+        "level_separation": 150,
+        "tree_separation": 200
+      },
+      "circular": {
+        "radius": 200,
+        "start_angle": 0,
+        "sweep_angle": 360
+      }
+    },
+    "interaction_settings": {
+      "hover_effects": {
+        "node_highlight": true,
+        "relationship_highlight": true,
+        "neighbor_fade": true,
+        "tooltip_delay": 500
+      },
+      "selection_effects": {
+        "multi_select": true,
+        "path_highlighting": true,
+        "context_expansion": 2
+      },
+      "animation_settings": {
+        "layout_animation": true,
+        "node_entrance": "fade_in",
+        "relationship_entrance": "draw",
+        "transition_duration": 1000
+      }
+    },
+    "scene_specific_styling": {
+      "security_overview": {
+        "hide_relationships": ["INCLUDED_IN"],
+        "emphasize_nodes": ["DataAsset", "Threat"],
+        "layout": "force_directed"
+      },
+      "crown_jewel_security": {
+        "filter_nodes": "crown_jewel = true OR labels() = 'Host' OR labels() = 'Vulnerability' OR labels() = 'ActionCard'",
+        "emphasize_relationships": ["AFFECTS", "HAS_VULNERABILITY"],
+        "layout": "hierarchical"
+      },
+      "active_threats": {
+        "filter_nodes": "severity IN ['CRITICAL', 'HIGH'] OR connected_to_threat = true",
+        "emphasize_relationships": ["EXPLOITED_BY"],
+        "layout": "hierarchical"
+      },
+      "workflow_management": {
+        "filter_nodes": "labels() IN ['ActionCard', 'Analyst'] OR connected_to_actioncard = true",
+        "emphasize_relationships": ["ASSIGNED_TO", "APPROVED_BY", "EXECUTED"],
+        "layout": "force_directed"
+      }
+    }
+  }
+}

@@ -1,0 +1,307 @@
+{
+  "title": "ORBIT Asset Intelligence Dashboard",
+  "version": "2.4.0",
+  "settings": {
+    "pagenumber": 0,
+    "editable": true,
+    "fullscreenEnabled": false,
+    "parameters": {
+      "sensitivity_threshold": 0.7,
+      "pii_type": "CREDIT_CARD"
+    }
+  },
+  "pages": [
+    {
+      "title": "Asset Classification",
+      "reports": [
+        {
+          "id": "total-assets-metric",
+          "title": "Total Data Assets",
+          "query": "MATCH (d:DataAsset) RETURN count(d) AS total_assets",
+          "width": 3,
+          "height": 3,
+          "x": 0,
+          "y": 0,
+          "type": "value",
+          "selection": {},
+          "settings": {
+            "format": "0,0",
+            "suffix": " assets",
+            "textColor": "#3498db"
+          }
+        },
+        {
+          "id": "crown-jewel-count",
+          "title": "Crown Jewel Assets",
+          "query": "MATCH (d:DataAsset {crown_jewel: true}) RETURN count(d) AS crown_jewel_count",
+          "width": 3,
+          "height": 3,
+          "x": 3,
+          "y": 0,
+          "type": "value",
+          "selection": {},
+          "settings": {
+            "format": "0,0",
+            "suffix": " crown jewels",
+            "textColor": "#f1c40f"
+          }
+        },
+        {
+          "id": "pii-asset-count",
+          "title": "Assets with PII",
+          "query": "MATCH (d:DataAsset) WHERE size(d.pii_types) > 0 RETURN count(d) AS pii_asset_count",
+          "width": 3,
+          "height": 3,
+          "x": 6,
+          "y": 0,
+          "type": "value",
+          "selection": {},
+          "settings": {
+            "format": "0,0",
+            "suffix": " with PII",
+            "textColor": "#e67e22"
+          }
+        },
+        {
+          "id": "avg-sensitivity-score",
+          "title": "Average Sensitivity Score",
+          "query": "MATCH (d:DataAsset) RETURN round(avg(d.sensitivity_score) * 100) / 100 AS avg_sensitivity",
+          "width": 3,
+          "height": 3,
+          "x": 9,
+          "y": 0,
+          "type": "value",
+          "selection": {},
+          "settings": {
+            "format": "0.00",
+            "textColor": "#9b59b6"
+          }
+        },
+        {
+          "id": "sensitivity-score-distribution",
+          "title": "Asset Sensitivity Score Distribution",
+          "query": "MATCH (d:DataAsset) WITH CASE WHEN d.sensitivity_score >= 0.9 THEN '0.9-1.0 (Critical)' WHEN d.sensitivity_score >= 0.8 THEN '0.8-0.9 (Very High)' WHEN d.sensitivity_score >= 0.7 THEN '0.7-0.8 (High)' WHEN d.sensitivity_score >= 0.6 THEN '0.6-0.7 (Medium-High)' WHEN d.sensitivity_score >= 0.4 THEN '0.4-0.6 (Medium)' WHEN d.sensitivity_score >= 0.2 THEN '0.2-0.4 (Low-Medium)' ELSE '0.0-0.2 (Low)' END AS sensitivity_range RETURN sensitivity_range, count(*) AS asset_count ORDER BY asset_count DESC",
+          "width": 6,
+          "height": 5,
+          "x": 0,
+          "y": 3,
+          "type": "bar",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "yellow_orange_red",
+            "layout": "horizontal",
+            "marginLeft": 140
+          }
+        },
+        {
+          "id": "pii-type-prevalence",
+          "title": "PII Type Prevalence",
+          "query": "MATCH (d:DataAsset) WHERE size(d.pii_types) > 0 UNWIND d.pii_types AS pii_type RETURN pii_type, count(*) AS prevalence ORDER BY prevalence DESC",
+          "width": 6,
+          "height": 5,
+          "x": 6,
+          "y": 3,
+          "type": "pie",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "category10"
+          }
+        },
+        {
+          "id": "crown-jewel-details",
+          "title": "Crown Jewel Asset Details",
+          "query": "MATCH (d:DataAsset {crown_jewel: true})-[:RESIDES_ON]->(h:Host) RETURN d.location_pseudonym AS asset_location, d.sensitivity_score AS sensitivity, h.hostname AS host, h.ip AS host_ip, d.pii_types AS pii_types, size(d.pii_types) AS pii_count ORDER BY d.sensitivity_score DESC",
+          "width": 12,
+          "height": 5,
+          "x": 0,
+          "y": 8,
+          "type": "table",
+          "selection": {},
+          "settings": {
+            "compact": false,
+            "allowDownload": true,
+            "columnWidths": {
+              "asset_location": 200,
+              "sensitivity": 100,
+              "host": 150,
+              "pii_types": 300
+            }
+          }
+        },
+        {
+          "id": "asset-host-distribution",
+          "title": "Asset Distribution by Host",
+          "query": "MATCH (d:DataAsset)-[:RESIDES_ON]->(h:Host) WITH h, count(d) AS asset_count, avg(d.sensitivity_score) AS avg_sensitivity ORDER BY asset_count DESC LIMIT 15 RETURN h.hostname AS hostname, h.ip AS ip, asset_count, round(avg_sensitivity * 100) / 100 AS avg_sensitivity",
+          "width": 6,
+          "height": 4,
+          "x": 0,
+          "y": 13,
+          "type": "table",
+          "selection": {},
+          "settings": {
+            "compact": true
+          }
+        },
+        {
+          "id": "weekly-asset-scan-activity",
+          "title": "Asset Scan Activity (Last 30 Days)",
+          "query": "MATCH (d:DataAsset) WHERE d.scan_ts IS NOT NULL AND datetime(d.scan_ts) > datetime() - duration('P30D') WITH date(datetime(d.scan_ts)) AS scan_date RETURN scan_date, count(*) AS scanned_assets ORDER BY scan_date DESC",
+          "width": 6,
+          "height": 4,
+          "x": 6,
+          "y": 13,
+          "type": "line",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "green_blue",
+            "curve": "monotoneX"
+          }
+        }
+      ]
+    },
+    {
+      "title": "PII Analysis",
+      "reports": [
+        {
+          "id": "high-risk-pii-combinations",
+          "title": "High-Risk PII Combinations",
+          "query": "MATCH (d:DataAsset) WHERE size(d.pii_types) >= 2 AND d.sensitivity_score >= $sensitivity_threshold WITH d.pii_types AS combination, count(*) AS frequency RETURN combination, frequency ORDER BY frequency DESC LIMIT 10",
+          "width": 8,
+          "height": 5,
+          "x": 0,
+          "y": 0,
+          "type": "table",
+          "selection": {},
+          "settings": {
+            "compact": false,
+            "allowDownload": true
+          }
+        },
+        {
+          "id": "pii-sensitivity-correlation",
+          "title": "PII Count vs Sensitivity Score",
+          "query": "MATCH (d:DataAsset) WITH size(d.pii_types) AS pii_count, d.sensitivity_score AS sensitivity WHERE pii_count > 0 RETURN pii_count, round(avg(sensitivity) * 100) / 100 AS avg_sensitivity, count(*) AS asset_count ORDER BY pii_count",
+          "width": 4,
+          "height": 5,
+          "x": 8,
+          "y": 0,
+          "type": "bar",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "yellow_orange_red",
+            "layout": "vertical"
+          }
+        },
+        {
+          "id": "pii-type-filter-assets",
+          "title": "Assets by PII Type",
+          "query": "MATCH (d:DataAsset) WHERE $pii_type IN d.pii_types RETURN d.location_pseudonym AS asset_location, d.sensitivity_score AS sensitivity, d.pii_types AS all_pii_types, d.crown_jewel AS is_crown_jewel ORDER BY d.sensitivity_score DESC",
+          "width": 12,
+          "height": 6,
+          "x": 0,
+          "y": 5,
+          "type": "table",
+          "selection": {},
+          "settings": {
+            "compact": false,
+            "allowDownload": true
+          }
+        },
+        {
+          "id": "pii-network-visualization",
+          "title": "PII Asset Network",
+          "query": "MATCH (d:DataAsset)-[:RESIDES_ON]->(h:Host) WHERE size(d.pii_types) >= 2 OPTIONAL MATCH (h)-[:HAS_VULNERABILITY]->(v:Vulnerability) RETURN d, h, v LIMIT 30",
+          "width": 12,
+          "height": 6,
+          "x": 0,
+          "y": 11,
+          "type": "graph",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "category10",
+            "layout": "forceDirected",
+            "defaultNodeSize": "large",
+            "hideSelections": true
+          }
+        }
+      ]
+    },
+    {
+      "title": "Risk Assessment",
+      "reports": [
+        {
+          "id": "vulnerability-asset-correlation",
+          "title": "Asset Risk by Vulnerability Exposure",
+          "query": "MATCH (d:DataAsset)-[:RESIDES_ON]->(h:Host) OPTIONAL MATCH (h)-[:HAS_VULNERABILITY]->(v:Vulnerability) WITH d, h, count(v) AS vuln_count WHERE d.sensitivity_score >= 0.6 RETURN d.location_pseudonym AS asset_location, d.sensitivity_score AS sensitivity, h.hostname AS host, vuln_count, CASE WHEN vuln_count = 0 THEN 'No Vulnerabilities' WHEN vuln_count <= 2 THEN 'Low Risk' WHEN vuln_count <= 5 THEN 'Medium Risk' ELSE 'High Risk' END AS risk_level ORDER BY d.sensitivity_score DESC, vuln_count DESC",
+          "width": 12,
+          "height": 6,
+          "x": 0,
+          "y": 0,
+          "type": "table",
+          "selection": {},
+          "settings": {
+            "compact": false,
+            "allowDownload": true
+          }
+        },
+        {
+          "id": "crown-jewel-vulnerability-matrix",
+          "title": "Crown Jewel Vulnerability Exposure",
+          "query": "MATCH (d:DataAsset {crown_jewel: true})-[:RESIDES_ON]->(h:Host) OPTIONAL MATCH (h)-[:HAS_VULNERABILITY]->(v:Vulnerability) WITH d, h, collect(v) AS vulnerabilities, count(v) AS vuln_count RETURN d.location_pseudonym AS crown_jewel_asset, h.hostname AS host, vuln_count, [v IN vulnerabilities WHERE v.cvss >= 7.0 | v.cve_id] AS high_severity_cves ORDER BY vuln_count DESC",
+          "width": 8,
+          "height": 5,
+          "x": 0,
+          "y": 6,
+          "type": "table",
+          "selection": {},
+          "settings": {
+            "compact": false
+          }
+        },
+        {
+          "id": "risk-score-distribution",
+          "title": "Composite Risk Score Distribution",
+          "query": "MATCH (d:DataAsset)-[:RESIDES_ON]->(h:Host) OPTIONAL MATCH (h)-[:HAS_VULNERABILITY]->(v:Vulnerability) WITH d, count(v) AS vuln_count, avg(COALESCE(v.cvss, 0)) AS avg_cvss WITH d.sensitivity_score + (vuln_count * 0.1) + (avg_cvss * 0.1) AS risk_score, d RETURN CASE WHEN risk_score >= 1.0 THEN 'Critical Risk' WHEN risk_score >= 0.8 THEN 'High Risk' WHEN risk_score >= 0.6 THEN 'Medium Risk' WHEN risk_score >= 0.4 THEN 'Low Risk' ELSE 'Minimal Risk' END AS risk_category, count(*) AS asset_count ORDER BY asset_count DESC",
+          "width": 4,
+          "height": 5,
+          "x": 8,
+          "y": 6,
+          "type": "pie",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "red_yellow_green"
+          }
+        },
+        {
+          "id": "actioncard-asset-coverage",
+          "title": "Asset Protection Coverage (ActionCards)",
+          "query": "MATCH (d:DataAsset) OPTIONAL MATCH (d)<-[:AFFECTS]-(ac:ActionCard) WITH d, count(ac) AS actioncard_count, d.crown_jewel AS is_crown_jewel RETURN CASE WHEN actioncard_count > 0 THEN 'Protected' ELSE 'Unprotected' END AS protection_status, is_crown_jewel, count(*) AS asset_count",
+          "width": 6,
+          "height": 4,
+          "x": 0,
+          "y": 11,
+          "type": "bar",
+          "selection": {},
+          "settings": {
+            "nodeColorScheme": "green_yellow_red",
+            "layout": "grouped"
+          }
+        },
+        {
+          "id": "compliance-gap-analysis",
+          "title": "Compliance Gap Analysis",
+          "query": "MATCH (d:DataAsset) WITH CASE WHEN d.crown_jewel = true AND size([ac IN [(d)<-[:AFFECTS]-(ac:ActionCard) | ac] WHERE ac.status IN ['approved', 'executing', 'completed']]) = 0 THEN 'Crown Jewel - No Active Protection' WHEN size(d.pii_types) >= 2 AND d.sensitivity_score < 0.6 THEN 'PII Asset - Low Sensitivity Score' WHEN d.scan_status <> 'scanned' THEN 'Unscanned Asset' ELSE 'Compliant' END AS compliance_status RETURN compliance_status, count(*) AS asset_count ORDER BY asset_count DESC",
+          "width": 6,
+          "height": 4,
+          "x": 6,
+          "y": 11,
+          "type": "table",
+          "selection": {},
+          "settings": {
+            "compact": false
+          }
+        }
+      ]
+    }
+  ]
+}
