@@ -67,6 +67,24 @@ services:
     networks:
       - orbit-network
 
+  wazuh-mcp:
+    build:
+      context: .
+      dockerfile: wazuh_mcp/Dockerfile
+    container_name: wazuh-mcp
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    depends_on:
+      neo4j:
+        condition: service_healthy
+      wazuh.manager:
+        condition: service_healthy
+    networks:
+      - orbit-network
+
   wazuh.indexer:
     image: wazuh/wazuh-indexer:4.7.0
     container_name: wazuh-indexer
